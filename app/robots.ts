@@ -24,13 +24,29 @@ export default function robots(): MetadataRoute.Robots {
         '/*?q=',
       ],
     },
+    // AI Crawlers & Search Engines (Generative Engine Optimization - GEO)
     {
-      userAgent: 'GPTBot',
-      disallow: '/',
-    },
-    {
-      userAgent: 'ClaudeBot',
-      disallow: '/',
+      userAgent: [
+        'GPTBot',
+        'ChatGPT-User',
+        'OAI-SearchBot',
+        'ClaudeBot',
+        'PerplexityBot',
+        'Google-Extended',
+        'Applebot-Extended',
+        'cohere-ai',
+        'CCBot'
+      ],
+      allow: ['/', '/llms.txt', '/llms-full.txt', '/find-my-academy', '/blog/'],
+      disallow: [
+        '/af-ass-manage/',
+        '/profile/',
+        '/api/',
+        '/manager/',
+        '/sales_manager/',
+        '/login',
+        '/register'
+      ],
     },
     {
       userAgent: 'MJ12bot',

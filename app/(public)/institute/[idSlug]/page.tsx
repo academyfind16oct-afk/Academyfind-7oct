@@ -77,7 +77,11 @@ const formatCurrency = (amount?: number | null) => {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { idSlug } = await params;
   const id = extractId(idSlug);
-  const institute = await getCachedInstituteById(id);
+  let institute: any = await getCachedInstituteById(id);
+
+  if (!institute) {
+    institute = await getInstituteById(idSlug);
+  }
 
   if (!institute) return { title: "Institute Not Found | AcademyFind" };
 
@@ -99,7 +103,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   ];
 
   if (institute.metaKeywords) {
-    const customKeywords = institute.metaKeywords.split(',').map(k => k.trim()).filter(Boolean);
+    const customKeywords = (institute.metaKeywords as string).split(',').map((k: string) => k.trim()).filter(Boolean);
     keywordArray = [...customKeywords, ...keywordArray];
   }
 
@@ -137,7 +141,11 @@ export default async function InstitutePage({ params }: PageProps) {
     notFound();
   }
 
-  const institute = await getCachedInstituteById(id);
+  let institute = await getCachedInstituteById(id);
+
+  if (!institute) {
+    institute = await getInstituteById(idSlug);
+  }
 
   if (!institute) notFound();
 

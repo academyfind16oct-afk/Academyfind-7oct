@@ -17,9 +17,10 @@
 
 import { getInstitutesByCategoryAndCity } from "@/lib/institutes/institutes_cat_city";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import formatSlug from "@/lib/formatSlug";
 import Script from "next/script";
+import { prisma } from "@/lib/prisma";
 
 import Breadcrumb from "@/components/navigation/BreadCrumbs";
 import CityHero from "@/components/City_Category/CityHero";
@@ -431,6 +432,24 @@ export default async function CategoryCityPage({ params, searchParams }: PagePro
       mode,
       providerType
     );
+
+  // If 0 institutes found and no search query, check if the 2nd slug is an institute slug!
+  if ((!institutes || institutes.length === 0) && !q) {
+    const maybeInst = await prisma.institute.findFirst({
+      where: {
+        OR: [
+          { slug: city },
+          { slug: { contains: city } },
+          { id: city },
+        ],
+      },
+      select: { id: true, slug: true },
+    });
+
+    if (maybeInst) {
+      permanentRedirect(`/institute/${maybeInst.id}-${maybeInst.slug}`);
+    }
+  }
 
   const displayLocationText = address || q || cityName;
 

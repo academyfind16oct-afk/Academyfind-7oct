@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, LifeBuoy } from "lucide-react";
+import { ArrowRight, LifeBuoy, Sparkles } from "lucide-react";
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -139,6 +139,23 @@ export function HeroSection() {
           >
             Discover coaching institutes, tuition centers, skill-development programs, and extracurricular classes for your preparation journey.
           </p>
+
+          {/* AI Matchmaker Highlight CTA */}
+          <div className="hero-stagger mt-5 mb-2">
+            <Link
+              href="/find-my-academy"
+              className="group inline-flex items-center gap-2.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 px-5 py-2 text-xs sm:text-sm font-bold text-amber-900 shadow-xs backdrop-blur-md hover:border-amber-400 hover:bg-white hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              <Sparkles className="size-4 text-amber-500 group-hover:rotate-12 transition-transform" />
+              <span>
+                Confused which coaching suits you?{' '}
+                <span className="text-amber-600 underline underline-offset-2">
+                  Ask AI Counselor (Top 3 Institutes for You) →
+                </span>
+              </span>
+            </Link>
+          </div>
 
           {/* Search Label */}
           <p

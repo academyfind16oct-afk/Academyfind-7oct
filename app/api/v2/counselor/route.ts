@@ -1,6 +1,7 @@
 import { meili } from '@/lib/meilisearch';
 import { streamText, generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
+import { prisma } from '@/lib/prisma';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -149,22 +150,71 @@ CRITICAL: Do NOT output <think> tags or any reasoning. Respond directly.
         console.warn("⚠️ [AI Counselor Route] Meilisearch lookup skipped:", (meiliErr as Error).message);
       }
 
+      // If Meilisearch returned empty (or failed/timed out), fall back to PostgreSQL Prisma
+      if (cleanHitsForAI.length === 0) {
+        try {
+          const loc = extractedData.locationString || '';
+          const q = extractedData.query || '';
+          const dbInstitutes = await prisma.institute.findMany({
+            where: {
+              isActive: true,
+              ...(loc ? {
+                OR: [
+                  { city: { name: { contains: loc, mode: 'insensitive' } } },
+                  { address: { contains: loc, mode: 'insensitive' } },
+                ]
+              } : {}),
+            },
+            take: 5,
+            orderBy: [{ isVerified: 'desc' }, { averageRating: 'desc' }, { reviewCount: 'desc' }],
+            select: {
+              id: true,
+              name: true,
+              address: true,
+              slug: true,
+              averageRating: true,
+              googleRating: true,
+              feeMin: true,
+              feeMax: true,
+              city: { select: { name: true, slug: true } },
+              categories: { select: { category: { select: { name: true, slug: true } } } },
+            }
+          });
+
+          cleanHitsForAI = dbInstitutes.map(h => ({
+            name: h.name,
+            address: h.address,
+            city: h.city?.name || 'India',
+            rating: h.googleRating || h.averageRating || 4.5,
+            categories: h.categories?.map(c => c.category?.name),
+            url: `/institute/${h.id}-${h.slug}`,
+            exploreLink: `/${h.city?.slug || 'delhi'}/${h.categories?.[0]?.category?.slug || 'jee-coaching'}`
+          }));
+        } catch (dbErr) {
+          console.warn("⚠️ [AI Counselor Route] Prisma fallback error:", (dbErr as Error).message);
+        }
+      }
+
       const searchContext = JSON.stringify(cleanHitsForAI);
 
-      systemPrompt = `You are 'AcademyFind AI', an expert counselor.
+      systemPrompt = `You are 'AcademyFind AI', an elite academic & admissions counselor.
 CRITICAL: Do NOT output <think> tags or any reasoning. Respond directly.
-        DATABASE CONTEXT:
-        ---
-        ${searchContext}
-        ---
-        STRICT RULES:
-        1. ONLY base your coaching recommendations on the DATABASE CONTEXT. If the context is empty, say we don't have exact matches but give general advice.
-        2. Format institutes exactly like this:
-           - **[Name]** — [City] · ★[rating] — [View Details]([url])
-        3. At the end, add an explore link using exploreLink from context.
-        4. Make links valid markdown.
-        5. Be conversational but concise. Keep responses SHORT.
-        6. Just Output the final answer no thinking or anything no reasoning of ai model should be displayed to user on frontend`;
+DATABASE CONTEXT:
+---
+${searchContext}
+---
+STRICT COUNSELING RULES:
+1. If the student provided a detailed query with budget, batch size, target exam, or class (e.g., "Class 11 in Agra, budget ₹1.5L, JEE 2028, small batches..."):
+   - Analyze their situation empathetically (addressing their learning pace and doubt needs).
+   - Produce a personalized shortlist of the 3 most suitable institutes.
+   - For each institute, state:
+     - **[Name]** — [City] · ★[rating] — [View Details]([url])
+     - 🎯 Why it fits: Detail how the fees, batch size, and doubt counters match their exact situation.
+   - Provide a direct link to the interactive AI Matchmaker: [Find My Best Academy](https://academyfind.com/find-my-academy)
+2. If the user asks generally about coachings, format institutes like:
+   - **[Name]** — [City] · ★[rating] — [View Details]([url])
+3. Make all markdown links valid.
+4. Keep tone student-first, encouraging, and honest. Avoid marketing clichés.`;
 
     } else if (extractedData.intent === "APTITUDE") {
       systemPrompt = `You are 'AcademyFind AI', a genuine and empathetic Senior Career Counselor.

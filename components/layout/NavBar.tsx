@@ -14,6 +14,7 @@ import {
   Scale,
   MessageCircle,
   Users,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
@@ -63,9 +64,9 @@ export default function Navbar({ session: initialSession }: { session?: any }) {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4 lg:px-10">
 
         {/* Left Area: Logo */}
-        <div className="flex-1 flex justify-start">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-md border border-slate-100 transition-all duration-300 group-hover:shadow-amber-500/25 group-hover:border-amber-200">
+        <div className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-white shadow-md border border-slate-100 transition-all duration-300 group-hover:shadow-amber-500/25 group-hover:border-amber-200">
               <Image
                 src="/logo.png"
                 alt="AcademyFind Logo"
@@ -76,30 +77,30 @@ export default function Navbar({ session: initialSession }: { session?: any }) {
             </div>
 
             <div>
-              <span className="block text-lg font-extrabold tracking-tight text-slate-800 transition-colors group-hover:text-amber-500">
+              <span className="block text-base sm:text-lg font-extrabold tracking-tight text-slate-800 transition-colors group-hover:text-amber-500">
                 AcademyFind
               </span>
-              <p className="text-[0.6rem] font-bold tracking-widest text-amber-500 uppercase">
+              <p className="text-[0.58rem] font-bold tracking-widest text-amber-500 uppercase">
                 Academy Search Simplified
               </p>
             </div>
           </Link>
         </div>
 
-        {/* Center Area: Main Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-8 px-4">
+        {/* Center Area: Main Navigation Links (Clean, Uncluttered) */}
+        <nav className="hidden lg:flex items-center gap-5 xl:gap-7">
           {[
             { label: "Search", href: "/" },
             { label: "Community", href: "/community" },
             { label: "Articles", href: "/blog" },
-            { label: "About Us", href: "/about" },
-            { label: "Contact", href: "/contact" },
+            { label: "About", href: "/about", className: "hidden xl:inline-block" },
           ].map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`relative py-1 text-sm font-semibold transition-colors duration-300 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:scale-x-0 after:bg-amber-500 after:transition-transform after:duration-300 hover:text-amber-500 hover:after:scale-x-100 ${isActive(link.href) ? "text-amber-500 after:scale-x-100" : "text-slate-600"
-                }`}
+              className={`relative py-1 text-sm font-semibold transition-colors duration-300 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:scale-x-0 after:bg-amber-500 after:transition-transform after:duration-300 hover:text-amber-500 hover:after:scale-x-100 ${
+                isActive(link.href) ? "text-amber-500 after:scale-x-100" : "text-slate-600"
+              } ${link.className || ""}`}
             >
               {link.label}
             </Link>
@@ -107,25 +108,39 @@ export default function Navbar({ session: initialSession }: { session?: any }) {
         </nav>
 
         {/* Right Area: Action Buttons & Auth Dropdown */}
-        <div className="hidden lg:flex flex-1 justify-end items-center gap-4">
+        <div className="hidden lg:flex items-center gap-2 xl:gap-2.5 shrink-0">
+          <Link
+            href="/find-my-academy"
+            className={`group flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-300 whitespace-nowrap shadow-xs hover:-translate-y-0.5 ${
+              isActive("/find-my-academy")
+                ? "bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-white shadow-md shadow-amber-500/25"
+                : "bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 text-amber-900 border border-amber-300/80 hover:bg-gradient-to-r hover:from-amber-500 hover:to-orange-500 hover:text-white hover:shadow-md hover:shadow-amber-500/25"
+            }`}
+          >
+            <Sparkles className="size-3.5 text-amber-500 group-hover:text-white transition-colors animate-pulse" />
+            AI Counselor
+          </Link>
+
           <Link
             href="/compare"
-            className={`group flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 whitespace-nowrap ${isActive("/compare")
-              ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
-              : "bg-amber-50 text-amber-700 border border-amber-100/50 hover:bg-amber-100 hover:text-amber-800"
-              }`}
+            className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+              isActive("/compare")
+                ? "bg-amber-500 text-white shadow-sm shadow-amber-500/20 font-bold"
+                : "bg-amber-50/80 text-amber-800 border border-amber-100 hover:bg-amber-100 hover:text-amber-900"
+            }`}
           >
             <Scale className="size-3.5 transition-transform duration-300 group-hover:rotate-12" />
-            Compare Institutes
+            Compare
           </Link>
 
           <div className="relative group/add-inst">
             <Link
               href="/user/create-institute"
-              className={`group flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 whitespace-nowrap ${isActive("/user/create-institute") || isActive("/?claim=true")
-                ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
-                : "bg-amber-50 text-amber-700 border border-amber-100/50 hover:bg-amber-100 hover:text-amber-800"
-                }`}
+              className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                isActive("/user/create-institute") || isActive("/?claim=true")
+                  ? "bg-amber-500 text-white shadow-sm shadow-amber-500/20 font-bold"
+                  : "bg-amber-50/80 text-amber-800 border border-amber-100 hover:bg-amber-100 hover:text-amber-900"
+              }`}
             >
               <Building className="size-3.5 transition-transform duration-300 group-hover:-translate-y-0.5" />
               Add Institute
@@ -145,11 +160,11 @@ export default function Navbar({ session: initialSession }: { session?: any }) {
             </div>
           </div>
 
-          {/* Action Elements ke beech me cleaner spacing ke liye ek light divider */}
-          <div className="h-5 w-px bg-slate-200/80 mx-1"></div>
+          {/* Subtle divider */}
+          <div className="h-4 w-px bg-slate-200/80 mx-0.5"></div>
 
           {/* Auth Dropdown / Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {session?.user ? (
               <>
                 <NotificationBell />
@@ -208,6 +223,7 @@ export default function Navbar({ session: initialSession }: { session?: any }) {
 
               <div className="flex flex-col gap-1.5">
                 {[
+                  { label: "AI Counselor", href: "/find-my-academy", icon: Sparkles, highlight: true },
                   { label: "Search", href: "/", icon: Search },
                   { label: "Community", href: "/community", icon: Users },
                   { label: "Articles", href: "/blog", icon: FileText },
@@ -223,13 +239,13 @@ export default function Navbar({ session: initialSession }: { session?: any }) {
                       key={item.href}
                       asChild
                       variant="ghost"
-                      className={`justify-start gap-3 h-11 px-4 rounded-2xl transition-all duration-200 ${active
+                      className={`justify-start gap-3 h-11 px-4 rounded-2xl transition-all duration-200 ${item.highlight && !active ? "bg-amber-500/10 text-amber-800 font-extrabold hover:bg-amber-500/20" : active
                         ? "bg-amber-50 text-amber-700 hover:bg-amber-50 hover:text-amber-700 font-bold"
                         : "text-slate-600 hover:bg-slate-50"
                         }`}
                     >
                       <Link href={item.href} onClick={() => setIsOpen(false)}>
-                        <Icon className={`size-4 ${active ? "text-amber-600" : "text-slate-400"}`} />
+                        <Icon className={`size-4 ${item.highlight ? "text-amber-500 animate-pulse" : active ? "text-amber-600" : "text-slate-400"}`} />
                         {item.label}
                       </Link>
                     </Button>
