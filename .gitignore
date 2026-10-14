@@ -62,4 +62,3 @@ next-env.d.ts
 /area.txt
 /test_places_new.ts
 /scripts
-!/scripts/enrich_institute_fees.ts
