@@ -251,18 +251,9 @@ export default function FindMyAcademyClient() {
         body: JSON.stringify(payload),
       });
 
-      let data: any = null;
-      try {
-        const text = await res.text();
-        data = text ? JSON.parse(text) : null;
-      } catch (parseErr) {
-        console.warn('API returned non-JSON:', parseErr);
-      }
-
-      if (!res.ok || !data) {
-        throw new Error(
-          data?.error || `Counseling engine is momentarily busy (status ${res.status}). Please try again.`
-        );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to match institutes');
       }
 
       setResult(data);
@@ -272,12 +263,8 @@ export default function FindMyAcademyClient() {
       }, 200);
     } catch (err: any) {
       console.error('Match error:', err);
-      let msg = err.message || '';
-      if (msg.includes('JSON') || msg.includes('token') || msg.includes('Unexpected') || msg.includes('end of JSON')) {
-        msg = 'The AI counselor is experiencing high demand right now. Please click "Find Best Match" again.';
-      }
       setErrorMessage(
-        msg || 'Unable to connect to AI counselor. Please check your network and try again.'
+        err.message || 'Unable to connect to AI counselor. Please check your network and try again.'
       );
     } finally {
       setIsLoading(false);
