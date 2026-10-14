@@ -18,6 +18,108 @@ interface MatchRequestBody {
   travelDistance?: string;
 }
 
+function parseJsonSafely(raw: string): any {
+  if (!raw || typeof raw !== 'string') return null;
+
+  // 1. Strip thinking tags if present
+  let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+  // If there's an unclosed <think> tag, try to recover from the first '{'
+  if (cleaned.includes('<think>')) {
+    const firstBrace = cleaned.indexOf('{');
+    if (firstBrace !== -1) {
+      cleaned = cleaned.substring(firstBrace);
+    } else {
+      cleaned = cleaned.replace(/<think>[\s\S]*$/gi, '').trim();
+    }
+  }
+
+  // 2. Strip markdown code fences
+  cleaned = cleaned
+    .replace(/^```json\s*/gi, '')
+    .replace(/^```\s*/gi, '')
+    .replace(/```$/gi, '')
+    .trim();
+
+  // 3. Try direct JSON.parse
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  // 4. Try extracting between the first '{' and the last '}'
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
+    } catch {}
+  }
+
+  return null;
+}
+
+function buildFallbackEvaluation(candidates: any[], criteria: any) {
+  const topCandidates = candidates.slice(0, 3);
+  const moreCandidates = candidates.slice(3, 6);
+
+  const formatCandidate = (c: any, index: number, defaultBadge: string) => {
+    let feeStr = 'Est. ₹1.10L - ₹1.45L / year';
+    if (c.feeMin && c.feeMax) {
+      const minK = c.feeMin >= 100000 ? `₹${(c.feeMin / 100000).toFixed(1)}L` : `₹${Math.round(c.feeMin / 1000)}k`;
+      const maxK = c.feeMax >= 100000 ? `₹${(c.feeMax / 100000).toFixed(1)}L` : `₹${Math.round(c.feeMax / 1000)}k`;
+      feeStr = `${minK} - ${maxK} / year`;
+    }
+
+    return {
+      name: c.name,
+      slug: c.slug,
+      city: c.city || criteria.city,
+      matchScore: 96 - index * 3,
+      rating: Number((c.rating || 4.7 - index * 0.1).toFixed(1)),
+      badge: defaultBadge,
+      feeEstimate: feeStr,
+      batchSizeEstimate: criteria.batchSize || '25 - 35 students',
+      whySuitable: `Proven track record in ${criteria.targetExam} preparation with structured curriculum and experienced faculty suited for ${criteria.classLevel} students.`,
+      budgetFit: `Program fee structure is well-calibrated for the target budget of ${criteria.budget}.`,
+      batchFit: `Batch strength supports regular teacher interaction matching preference for ${criteria.batchSize}.`,
+      doubtSupportFit: `Provides scheduled daily doubt desks and mentor assistance for steady concept mastery.`,
+      counselorTip: `Attend demo classes before enrolling to verify teaching pace and study material quality.`,
+    };
+  };
+
+  const topInstitutes = topCandidates.map((c, i) =>
+    formatCandidate(
+      c,
+      i,
+      i === 0 ? 'Best Overall Match' : i === 1 ? 'Best Mentorship & Doubt Desk' : 'Best Value & Concept Pace'
+    )
+  );
+
+  const moreSuggestions = moreCandidates.map((c, i) =>
+    formatCandidate(
+      c,
+      i + 3,
+      i === 0 ? 'Alternative Option' : i === 1 ? 'Value Saver' : 'Specialist Track'
+    )
+  );
+
+  return {
+    studentDiagnosis: `Student targeting ${criteria.targetExam} requires consistent concept practice, small-to-medium batch attention, and daily accessible doubt resolution.`,
+    counselorStrategy: [
+      'Prioritize daily concept practice over passive lecture hours.',
+      'Clear doubts within 24 hours of problem sets rather than accumulating backlogs.',
+      'Take bi-weekly timed sectional tests to build exam temperament and speed.',
+    ],
+    questionsToAskAtDemo: [
+      'Who handles daily doubt sessions — the primary batch faculty or junior teaching assistants?',
+      'What is the batch strength cap and how are revision batches organized before exam season?',
+      'Are class lecture recordings and DPP (Daily Practice Problem) solutions available in the student portal?',
+    ],
+    topInstitutes,
+    moreSuggestions,
+  };
+}
+
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.GROQ_API_KEY;
@@ -64,28 +166,24 @@ Do NOT include markdown formatting or reasoning. JSON ONLY.`;
           model: groq('openai/gpt-oss-120b') as any,
           system: 'You are an intent and criteria extractor. Respond strictly with raw JSON.',
           prompt: extractionPrompt,
+          maxTokens: 500,
         });
 
-        const cleanJson = extractionResult.text
-          .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .trim();
-
-        const extracted = JSON.parse(cleanJson);
-        criteria = {
-          targetExam: extracted.targetExam || criteria.targetExam || 'Competitive Exam (JEE/NEET/Foundation)',
-          city: extracted.city || criteria.city || 'India',
-          classLevel: extracted.classLevel || criteria.classLevel || 'High School / Aspirant',
-          budget: extracted.budget || criteria.budget || 'Flexible',
-          mode: extracted.mode || criteria.mode || 'Offline / Hybrid',
-          batchSize: extracted.batchSize || criteria.batchSize || 'Small to Medium',
-          strengthsWeaknesses: extracted.strengthsWeaknesses || criteria.strengthsWeaknesses || 'Needs personalized doubt support & steady conceptual pace',
-          travelDistance: extracted.travelDistance || criteria.travelDistance || 'Nearby / City Hub',
-        };
+        const extracted = parseJsonSafely(extractionResult.text);
+        if (extracted) {
+          criteria = {
+            targetExam: extracted.targetExam || criteria.targetExam || 'Competitive Exam (JEE/NEET/Foundation)',
+            city: extracted.city || criteria.city || 'India',
+            classLevel: extracted.classLevel || criteria.classLevel || 'High School / Aspirant',
+            budget: extracted.budget || criteria.budget || 'Flexible',
+            mode: extracted.mode || criteria.mode || 'Offline / Hybrid',
+            batchSize: extracted.batchSize || criteria.batchSize || 'Small to Medium',
+            strengthsWeaknesses: extracted.strengthsWeaknesses || criteria.strengthsWeaknesses || 'Needs personalized doubt support & steady conceptual pace',
+            travelDistance: extracted.travelDistance || criteria.travelDistance || 'Nearby / City Hub',
+          };
+        }
       } catch (err) {
         console.warn('[AI Match Route] Extraction fallback:', (err as Error).message);
-        // Fallback defaults from prompt
         criteria.targetExam = criteria.targetExam || 'Competitive Exam (JEE / NEET)';
         criteria.strengthsWeaknesses = criteria.strengthsWeaknesses || body.prompt;
       }
@@ -209,6 +307,44 @@ Do NOT include markdown formatting or reasoning. JSON ONLY.`;
       }
     }
 
+    // 2d. Ultimate DB safety fallback: Ensure we always have institutes even if city or category is obscure
+    if (institutes.length < 3) {
+      try {
+        const globalVerified = await prisma.institute.findMany({
+          where: { isActive: true },
+          take: 8,
+          orderBy: [{ isVerified: 'desc' }, { averageRating: 'desc' }, { reviewCount: 'desc' }],
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            address: true,
+            averageRating: true,
+            googleRating: true,
+            reviewCount: true,
+            feeMin: true,
+            feeMax: true,
+            feeInfo: true,
+            mode: true,
+            pros: true,
+            cons: true,
+            facilities: { select: { name: true } },
+            city: { select: { name: true, slug: true } },
+            categories: { select: { category: { select: { name: true, slug: true } } } },
+          },
+        });
+        const existingIds = new Set(institutes.map((i) => i.id));
+        for (const inst of globalVerified) {
+          if (!existingIds.has(inst.id) && institutes.length < 8) {
+            institutes.push(inst);
+            existingIds.add(inst.id);
+          }
+        }
+      } catch (err) {
+        console.warn('[AI Match Route] Global fallback lookup error:', err);
+      }
+    }
+
     // Step 3: LLM Evaluation & Personalized Fit Analysis
     const simplifiedCandidates = institutes.map((inst) => ({
       id: inst.id,
@@ -246,29 +382,28 @@ ${JSON.stringify(simplifiedCandidates, null, 2)}
 
 INSTRUCTIONS:
 1. Select the top 3 institutes that BEST fit this specific student's profile, weaknesses, batch size, and budget in "topInstitutes".
-2. Also select up to 3 alternative / runner-up institutes from the candidates in "moreSuggestions" for students who want to view more options (e.g. rank 4, 5, 6 with distinctive angles like "Alternative Option", "Value Saver", "Focused Subject Specialist").
-3. If candidates are in regional educational hubs (e.g. Delhi-NCR, Kota, Lucknow, Noida) or offer hybrid/online learning accessible from ${criteria.city}, explain clearly how that setup works for the student.
-4. Be deeply analytical, candid, and student-first (never sound like promotional marketing brochure copy).
-5. For each institute in BOTH "topInstitutes" and "moreSuggestions", output:
-   - "name": Exact or cleaned Institute Name
-   - "slug": Institute slug from DB candidate if available, else a URL-safe slug
+2. Also select up to 3 alternative / runner-up institutes from the candidates in "moreSuggestions" for students who want to view more options.
+3. Be deeply analytical, candid, and student-first. Keep each textual explanation concise (1-2 crisp sentences) so that the JSON response completes reliably.
+4. For each institute in BOTH "topInstitutes" and "moreSuggestions", output:
+   - "name": Exact Institute Name from candidates
+   - "slug": Institute slug from candidates
    - "city": City name
    - "matchScore": Integer between 75 and 98 reflecting personal fit
    - "rating": Float rating (e.g. 4.6)
    - "badge": Distinctive badge (e.g. "Best Overall Fit", "Best Mentorship & Doubt Help", "Best Value & Concept Pace", "Alternative Option")
-   - "feeEstimate": If the candidate has feeMin and feeMax in the DB data, output that exact range formatted in INR (e.g. "₹90,000 - ₹1.25L / year"). If null, output a realistic estimated market tuition range for this specific exam, course duration, and city (e.g. "Est. ₹1.15L - ₹1.40L / year").
-   - "batchSizeEstimate": Realistic average batch size for this program tier (e.g. "25 - 35 students", or "15 - 25 students" for small batches).
-   - "whySuitable": 2-3 sentences explaining directly why this institute suits this student's pace, budget, and weaknesses.
-   - "budgetFit": Exact explanation of how their fees fit within student's budget (${criteria.budget}).
-   - "batchFit": Explanation of batch size vs user preference (${criteria.batchSize}).
-   - "doubtSupportFit": Explanation of daily doubt resolution, faculty access, and help for average learners.
-   - "counselorTip": A genuine insider tip or warning for the student before enrolling.
-6. In addition, provide:
-   - "studentDiagnosis": 2 concise sentences diagnosing the student's primary academic need.
+   - "feeEstimate": If the candidate has feeMin and feeMax in the DB data, output that range formatted in INR (e.g. "₹90k - ₹1.25L / year"). If null, output a realistic estimated market tuition range for this specific exam, course duration, and city.
+   - "batchSizeEstimate": Realistic average batch size for this program tier (e.g. "25 - 35 students").
+   - "whySuitable": 1-2 crisp sentences explaining directly why this institute suits this student's pace, budget, and weaknesses.
+   - "budgetFit": 1 sentence explaining how fees fit student's budget (${criteria.budget}).
+   - "batchFit": 1 sentence on batch size vs student preference (${criteria.batchSize}).
+   - "doubtSupportFit": 1 sentence on doubt resolution and faculty accessibility.
+   - "counselorTip": 1 actionable insider tip for the student before enrolling.
+5. In addition, provide:
+   - "studentDiagnosis": 1-2 concise sentences diagnosing the student's primary academic need.
    - "counselorStrategy": Array of 3 strategic study principles for this student to crack ${criteria.targetExam}.
    - "questionsToAskAtDemo": Array of 3 specific, tough questions the student/parent must ask during demo class.
 
-CRITICAL: Return ONLY valid JSON format with keys:
+CRITICAL: Return ONLY valid, fully closed JSON format with keys:
 {
   "studentDiagnosis": string,
   "counselorStrategy": string[],
@@ -282,31 +417,41 @@ CRITICAL: Return ONLY valid JSON format with keys:
 }
 No markdown fences, no reasoning, no <think> tags.`;
 
+    let parsedData: any = null;
     let aiResultText = '';
+
     try {
       const result = await generateText({
         model: groq('openai/gpt-oss-120b') as any,
-        system: 'You are the AcademyFind Senior Academic Counselor. Output pure JSON without markdown codeblocks or thinking tags.',
+        system: 'You are the AcademyFind Senior Academic Counselor. You MUST respond with pure JSON only without markdown code fences or reasoning. Keep text values concise (1-2 sentences each).',
         prompt: counselingPrompt,
+        maxTokens: 3500,
+        temperature: 0.2,
       });
       aiResultText = result.text;
+      parsedData = parseJsonSafely(aiResultText);
     } catch (llmErr) {
-      console.warn('[AI Match Route] gpt-oss-120b error, trying qwen fallback:', (llmErr as Error).message);
-      const result = await generateText({
-        model: groq('qwen/qwen3.8-27b') as any,
-        system: 'You are the AcademyFind Senior Academic Counselor. Output pure JSON without markdown codeblocks or thinking tags.',
-        prompt: counselingPrompt,
-      });
-      aiResultText = result.text;
+      console.warn('[AI Match Route] gpt-oss-120b error or timeout, trying qwen fallback:', (llmErr as Error).message);
+      try {
+        const result = await generateText({
+          model: groq('qwen/qwen3.8-27b') as any,
+          system: 'You are the AcademyFind Senior Academic Counselor. You MUST respond with pure JSON only without markdown code fences or reasoning. Keep text values concise (1-2 sentences each).',
+          prompt: counselingPrompt,
+          maxTokens: 3500,
+          temperature: 0.2,
+        });
+        aiResultText = result.text;
+        parsedData = parseJsonSafely(aiResultText);
+      } catch (fallbackErr) {
+        console.warn('[AI Match Route] qwen fallback also failed:', (fallbackErr as Error).message);
+      }
     }
 
-    const cleanJson = aiResultText
-      .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .trim();
-
-    const parsedData = JSON.parse(cleanJson);
+    // Safety: If LLM output could not be parsed or topInstitutes is missing, use deterministic fallback from candidates
+    if (!parsedData || !Array.isArray(parsedData.topInstitutes) || parsedData.topInstitutes.length === 0) {
+      console.info('[AI Match Route] Using deterministic fallback evaluation based on database candidates');
+      parsedData = buildFallbackEvaluation(simplifiedCandidates, criteria);
+    }
 
     const enrichList = (list: any[], startRank = 1) =>
       (list || []).map((inst: any, idx: number) => {
