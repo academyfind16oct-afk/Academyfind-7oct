@@ -34,7 +34,7 @@ const loadingPhrases = [
 const INITIAL_MESSAGE = {
     id: 'initial',
     role: 'assistant' as const,
-    parts: [{ type: 'text' as const, text: "Hi! 👋 I'm your **AcademyFind Counselor**.\n\nTell me — what are you looking for?\n- 🏫 **Coaching** for an exam?\n- 🧠 **Career guidance** or aptitude help?\n- 📄 **Resume building**?\n- Or something else entirely?\n\nI'm here to genuinely help you find the right path! 🎯" }]
+    parts: [{ type: 'text' as const, text: "Hi! 👋 I'm your **AcademyFind AI Counselor**.\n\nTell me what you're looking for:\n- 🎯 **Personalized Coaching Match**: Tell me your target exam, city, budget & strengths (e.g. *\"Class 11 in Agra, budget ₹1.5L, JEE 2028, small batches\"*) or use our [Find My Best Academy tool](/find-my-academy)!\n- 🧠 **Career Guidance & Stream Choice**\n- 📄 **ATS Resume Building & Review**\n\nHow can I help you succeed today?" }]
 };
 
 interface AiChatBotProps {
@@ -404,60 +404,24 @@ export default function AiChatBot({ isAuthenticated = false, defaultName, defaul
 
                     {/* ===== CHAT TAB ===== */}
                     {activeTab === 'chat' && (
-                        !isAuthenticated ? (
-                            <div className="flex-1 px-5 py-6 bg-gradient-to-b from-amber-50/80 via-white to-amber-50/40 flex flex-col items-center justify-start overflow-y-auto">
-                                {/* Glowing Icon Badge */}
-                                <div className="relative mt-2 mb-4 shrink-0">
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-300/50">
-                                        <Sparkles className="w-8 h-8 animate-pulse" />
-                                    </div>
-                                    <div className="absolute -bottom-1 -right-1 bg-slate-900 text-white p-1 rounded-full shadow-md border border-white">
-                                        <Lock className="w-3 h-3" />
-                                    </div>
+                        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                            {/* Fast Matchmaker Banner */}
+                            <div className="px-3.5 py-2 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-white text-xs font-bold flex items-center justify-between shrink-0 shadow-xs">
+                                <div className="flex items-center gap-1.5">
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
+                                    <span>Targeting an exam? Get your top 3 fit:</span>
                                 </div>
-
-                                {/* Headline */}
-                                <h3 className="text-lg font-extrabold text-slate-900 mb-1.5 tracking-tight">
-                                    Unlock Your AI Counselor
-                                </h3>
-
-                                <p className="text-xs text-slate-600 mb-5 leading-relaxed max-w-[250px]">
-                                    Sign in to chat with your AI Counselor, get ATS resume reviews, and personalized career roadmaps!
-                                </p>
-
-                                {/* Feature Pills */}
-                                <div className="w-full space-y-2 mb-5 text-left">
-                                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white border border-amber-100/80 shadow-xs text-xs font-medium text-slate-700">
-                                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                                        <span>🎯 Personal Career Counseling</span>
-                                    </div>
-                                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white border border-amber-100/80 shadow-xs text-xs font-medium text-slate-700">
-                                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                                        <span>📄 ATS Resume Review & Building</span>
-                                    </div>
-                                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white border border-amber-100/80 shadow-xs text-xs font-medium text-slate-700">
-                                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                                        <span>🏫 Coaching Institute Finder</span>
-                                    </div>
-                                </div>
-
-                                {/* Login CTA Button */}
                                 <Link
-                                    href={buildAuthHref("/login", pathname)}
-                                    className="w-full py-3 px-5 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white font-bold text-sm shadow-md shadow-amber-300/40 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                    href="/find-my-academy"
+                                    onClick={() => setIsOpen(false)}
+                                    className="bg-white text-amber-800 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold hover:bg-amber-50 transition-colors shadow-2xs"
                                 >
-                                    <LogIn className="w-4 h-4" />
-                                    Sign In to Start Chatting
+                                    AI Matchmaker →
                                 </Link>
-
-                                <p className="mt-3 text-[11px] text-slate-400">
-                                    New to AcademyFind? <Link href={buildAuthHref("/register", pathname)} className="text-amber-600 font-semibold hover:underline">Create an account</Link>
-                                </p>
                             </div>
-                        ) : (
-                            <>
-                                {/* Chat Messages */}
-                                <div className="flex-1 p-4 bg-amber-50/30 overflow-y-auto flex flex-col gap-4">
+
+                            {/* Chat Messages */}
+                            <div className="flex-1 p-4 bg-amber-50/30 overflow-y-auto flex flex-col gap-4">
 
                                     {deferredMessages.map((m) => {
                                         const rawText = (typeof m.content === 'string' && m.content)
@@ -617,8 +581,8 @@ export default function AiChatBot({ isAuthenticated = false, defaultName, defaul
                                         </Button>
                                     </form>
                                 </div>
-                            </>
-                        ))}
+                            </div>
+                        )}
 
                     {/* ===== CALLBACK TAB ===== */}
                     {activeTab === 'callback' && (
