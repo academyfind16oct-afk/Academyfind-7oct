@@ -31,42 +31,42 @@ export default async function InstituteBlogsPage({ params }: PageProps) {
   const { idSlug } = await params;
   const id = extractId(idSlug);
 
-  const [institute, rawBlogs] = await Promise.all([
-    getInstituteById(id),
-    prisma.blogPost.findMany({
-      where: { relatedInstituteId: id, status: "PUBLISHED" },
-      orderBy: { publishedAt: "desc" },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        excerpt: true,
-        coverImage: true,
-        coverImageAlt: true,
-        readingTime: true,
-        publishedAt: true,
-        viewCount: true,
-        likeCount: true,
-        commentCount: true,
-        authorProfile: {
-          select: {
-            displayName: true,
-            user: { select: { username: true } },
-            avatarUrl: true,
-            isVerified: true,
-          }
-        },
-        category: {
-          select: { id: true, name: true, slug: true }
-        },
-        brand: {
-          select: { id: true, name: true, slug: true, avatarUrl: true }
-        }
-      }
-    })
-  ]);
-
+  const institute = await getInstituteById(id);
   if (!institute) notFound();
+
+  const properSlug = institute.slug ? `${institute.id}-${institute.slug}` : institute.id;
+
+  const rawBlogs = await prisma.blogPost.findMany({
+    where: { relatedInstituteId: institute.id, status: "PUBLISHED" },
+    orderBy: { publishedAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      coverImage: true,
+      coverImageAlt: true,
+      readingTime: true,
+      publishedAt: true,
+      viewCount: true,
+      likeCount: true,
+      commentCount: true,
+      authorProfile: {
+        select: {
+          displayName: true,
+          user: { select: { username: true } },
+          avatarUrl: true,
+          isVerified: true,
+        }
+      },
+      category: {
+        select: { id: true, name: true, slug: true }
+      },
+      brand: {
+        select: { id: true, name: true, slug: true, avatarUrl: true }
+      }
+    }
+  });
 
   const formattedBlogs: BlogCardPost[] = rawBlogs.map((blog: any) => ({
     ...blog,
@@ -85,7 +85,7 @@ export default async function InstituteBlogsPage({ params }: PageProps) {
         {/* Navigation / Header */}
         <div className="mb-10">
           <Link
-            href={`/institute/${idSlug}`}
+            href={`/institute/${properSlug}`}
             className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
           >
             <ArrowLeft className="size-4" />

@@ -396,7 +396,7 @@ function ReviewsTab({ profile }: { profile: any }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">
                 <Link
-                  href={`/institute/${review.institute.slug}`}
+                  href={`/institute/${review.institute.slug ? `${review.institute.id}-${review.institute.slug}` : review.institute.id}`}
                   className="truncate font-semibold text-slate-900 hover:text-amber-700"
                 >
                   {review.institute.name}

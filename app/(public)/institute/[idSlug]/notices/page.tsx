@@ -18,9 +18,9 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { idSlug } = await params;
   const id = extractId(idSlug);
-  const institute = await prisma.institute.findUnique({
-    where: { id },
-    select: { name: true, slug: true },
+  const institute = await prisma.institute.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
+    select: { name: true, slug: true, id: true },
   });
   if (!institute) return {};
   return {
@@ -39,19 +39,21 @@ export default async function InstituteNoticesPage({ params, searchParams }: Pro
   const id = extractId(idSlug);
   const now = new Date();
 
-  const institute = await prisma.institute.findUnique({
-    where: { id },
+  const institute = await prisma.institute.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     select: { id: true, name: true, slug: true, logo: true, imageUrl: true, subscriptionPlan: true },
   });
   if (!institute) notFound();
 
+  const properSlug = institute.slug ? `${institute.id}-${institute.slug}` : institute.id;
+
   const isEligible = institute.subscriptionPlan === "PREMIUM" || institute.subscriptionPlan === "ULTRA";
   if (!isEligible) {
-    redirect(`/institute/${institute.slug}`);
+    redirect(`/institute/${properSlug}`);
   }
 
   const whereClause: any = {
-    instituteId: id,
+    instituteId: institute.id,
     isActive: true,
     visibility: "PUBLIC",
     OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
@@ -86,7 +88,7 @@ export default async function InstituteNoticesPage({ params, searchParams }: Pro
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },
-          { label: institute.name, href: `/institute/${institute.slug}` },
+          { label: institute.name, href: `/institute/${properSlug}` },
           { label: "Notices", href: "#" },
         ]}
       />
@@ -111,7 +113,7 @@ export default async function InstituteNoticesPage({ params, searchParams }: Pro
       {/* Category filter */}
       <div className="flex gap-2 flex-wrap mb-7">
         <Link
-          href={`/institute/${institute.slug}/notices`}
+          href={`/institute/${properSlug}/notices`}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
             !category || category === "ALL"
               ? "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200"
@@ -123,7 +125,7 @@ export default async function InstituteNoticesPage({ params, searchParams }: Pro
         {categories.map(([key, meta]) => (
           <Link
             key={key}
-            href={`/institute/${institute.slug}/notices?category=${key}`}
+            href={`/institute/${properSlug}/notices?category=${key}`}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
               category === key
                 ? "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200"

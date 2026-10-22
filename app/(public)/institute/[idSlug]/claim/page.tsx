@@ -15,8 +15,8 @@ export async function generateMetadata({
   const id = extractId(idSlug);
 
   // Tab title ke liye institute ka naam nikal rahe hain
-  const institute = await prisma.institute.findUnique({
-    where: { id: id },
+  const institute = await prisma.institute.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     select: { name: true },
   });
 
@@ -51,11 +51,10 @@ export default async function ClaimInstitutePage({
 
   const userId = session.user.id;
 
-  // 3. Fetch exact Institute details using ID (Bulletproof method)
-  const institute = await prisma.institute.findUnique({
-    where: { id: id },
+  // 3. Fetch exact Institute details using ID or slug
+  const institute = await prisma.institute.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     select: { id: true, name: true },
-
   });
 
   if (!institute) {

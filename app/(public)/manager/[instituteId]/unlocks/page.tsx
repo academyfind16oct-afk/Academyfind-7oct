@@ -308,7 +308,7 @@ export default async function ManagerUnlocksPage({
                   Enhance Institute Profile
                 </Link>
                 <Link
-                  href={`/institute/${institute.slug || institute.id}`}
+                  href={`/institute/${institute.slug ? `${institute.id}-${institute.slug}` : institute.id}`}
                   target="_blank"
                   className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition"
                 >

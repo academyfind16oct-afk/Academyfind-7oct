@@ -74,13 +74,17 @@ export async function getInstituteById(id: string) {
     if (fromEnquiry) return fromEnquiry;
   }
 
-  // 3. Fallback: Search by slug
+  // 3. Fallback: Search by exact slug
+  const byExactSlug = await prisma.institute.findFirst({
+    where: { slug: id },
+    include: instituteInclude,
+  });
+  if (byExactSlug) return byExactSlug;
+
+  // 4. Fallback: Case-insensitive slug match
   return prisma.institute.findFirst({
     where: {
-      OR: [
-        { slug: id },
-        { slug: { contains: id } },
-      ],
+      slug: { equals: id, mode: "insensitive" },
     },
     include: instituteInclude,
   });

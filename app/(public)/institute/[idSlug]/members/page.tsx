@@ -13,8 +13,8 @@ type Props = { params: Promise<{ idSlug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { idSlug } = await params;
   const id = extractId(idSlug);
-  const institute = await prisma.institute.findUnique({
-    where: { id },
+  const institute = await prisma.institute.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     select: { name: true },
   });
   if (!institute) return { title: "Not found" };
@@ -28,8 +28,8 @@ export default async function MembersDirectoryPage({ params }: Props) {
   const { idSlug } = await params;
   const id = extractId(idSlug);
 
-  const institute = await prisma.institute.findUnique({
-    where: { id },
+  const institute = await prisma.institute.findFirst({
+    where: { OR: [{ id }, { slug: id }] },
     select: { id: true, name: true, slug: true },
   });
   if (!institute) notFound();
@@ -37,7 +37,7 @@ export default async function MembersDirectoryPage({ params }: Props) {
   const [students, teachers, managers] = await Promise.all([
     prisma.studentInstituteRecord.findMany({
       where: {
-        instituteId: id,
+        instituteId: institute.id,
         isVerified: true,
         isVisible: true,
         membership: { status: "ACTIVE" },

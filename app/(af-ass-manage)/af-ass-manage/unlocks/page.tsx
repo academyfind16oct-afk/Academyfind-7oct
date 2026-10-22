@@ -343,7 +343,7 @@ export default async function AdminUnlocksPage({
                           <div className="flex items-center gap-1.5">
                             <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <Link
-                              href={`/institute/${u.institute.slug || u.institute.id}`}
+                              href={`/institute/${u.institute.slug ? `${u.institute.id}-${u.institute.slug}` : u.institute.id}`}
                               target="_blank"
                               className="font-bold text-slate-900 hover:text-amber-600 transition flex items-center gap-1 group"
                             >

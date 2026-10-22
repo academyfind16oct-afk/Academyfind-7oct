@@ -94,7 +94,7 @@ export function FeaturedInstitutesRail({
 
               <div className="flex items-center gap-1.5 min-w-0">
                 <Link
-                  href={`/institute/${inst.slug}`}
+                  href={`/institute/${inst.slug ? `${inst.id}-${inst.slug}` : inst.id}`}
                   className="font-bold text-sm text-slate-900 line-clamp-1 hover:text-amber-600 transition-colors"
                 >
                   {inst.name}

@@ -88,7 +88,7 @@ export default function InstitutesMap({ institutes }: Props) {
               </p>
 
               <Link
-                href={`/institute/${selected.slug}`}
+                href={`/institute/${selected.slug ? `${selected.id}-${selected.slug}` : selected.id}`}
                 className="group flex items-center gap-1 text-sm font-medium text-amber-600 transition-colors hover:text-amber-700"
               >
                 View Details
