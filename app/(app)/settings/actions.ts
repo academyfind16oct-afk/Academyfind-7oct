@@ -7,11 +7,70 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { prisma } from "@/lib/prisma";
 import { checkAndAwardProfileCompletion } from "@/lib/profile/completion";
+import { v2 as cloudinary } from "cloudinary";
+
+cloudinary.config({
+  cloud_name:
+    process.env.CLOUDINARY_CLOUD_NAME ||
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export type SettingsActionState = {
   success: boolean;
   message: string;
 };
+
+export type UploadMediaResponse = {
+  success: boolean;
+  url?: string;
+  error?: string;
+};
+
+export async function uploadProfileMedia(
+  formData: FormData,
+): Promise<UploadMediaResponse> {
+  try {
+    const session = await requireAuth();
+    const file = formData.get("file") as File | null;
+    const type = (formData.get("type") as string) || "avatar";
+
+    if (!file || !(file instanceof File) || file.size === 0) {
+      return { success: false, error: "No file provided or file is empty." };
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: "Image size must be less than 5MB." };
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const mimeType = file.type || "image/jpeg";
+    const dataUri = `data:${mimeType};base64,${buffer.toString("base64")}`;
+
+    const folder =
+      type === "cover" ? "academyfind/users/covers" : "academyfind/users/avatars";
+
+    const uploadResult = await cloudinary.uploader.upload(dataUri, {
+      folder,
+      public_id: `user-${session.user.id}-${type}-${Date.now()}`,
+      overwrite: true,
+      format: "webp",
+    });
+
+    return {
+      success: true,
+      url: uploadResult.secure_url,
+    };
+  } catch (error: any) {
+    console.error("Profile media upload error:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to upload image. Please try again.",
+    };
+  }
+}
 
 const optionalUrl = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -88,12 +147,65 @@ export async function updateProfile(
   formData: FormData,
 ): Promise<SettingsActionState> {
   const session = await requireAuth();
+
+  let imageUrl = nullableText(formData, "image");
+  let coverImageUrl = nullableText(formData, "coverImage");
+
+  // Check if direct files were submitted in the form
+  const imageFile = formData.get("imageFile") as File | null;
+  if (
+    imageFile &&
+    imageFile instanceof File &&
+    imageFile.size > 0 &&
+    imageFile.name !== "undefined"
+  ) {
+    try {
+      const bytes = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const mimeType = imageFile.type || "image/jpeg";
+      const dataUri = `data:${mimeType};base64,${buffer.toString("base64")}`;
+      const uploadRes = await cloudinary.uploader.upload(dataUri, {
+        folder: "academyfind/users/avatars",
+        public_id: `user-${session.user.id}-avatar-${Date.now()}`,
+        overwrite: true,
+        format: "webp",
+      });
+      imageUrl = uploadRes.secure_url;
+    } catch (err) {
+      console.error("Error uploading avatar in updateProfile:", err);
+    }
+  }
+
+  const coverFile = formData.get("coverFile") as File | null;
+  if (
+    coverFile &&
+    coverFile instanceof File &&
+    coverFile.size > 0 &&
+    coverFile.name !== "undefined"
+  ) {
+    try {
+      const bytes = await coverFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const mimeType = coverFile.type || "image/jpeg";
+      const dataUri = `data:${mimeType};base64,${buffer.toString("base64")}`;
+      const uploadRes = await cloudinary.uploader.upload(dataUri, {
+        folder: "academyfind/users/covers",
+        public_id: `user-${session.user.id}-cover-${Date.now()}`,
+        overwrite: true,
+        format: "webp",
+      });
+      coverImageUrl = uploadRes.secure_url;
+    } catch (err) {
+      console.error("Error uploading cover in updateProfile:", err);
+    }
+  }
+
   const parsed = profileSchema.safeParse({
     name: formData.get("name"),
     username: formData.get("username"),
     phone: nullableText(formData, "phone"),
-    image: nullableText(formData, "image"),
-    coverImage: nullableText(formData, "coverImage"),
+    image: imageUrl,
+    coverImage: coverImageUrl,
   });
 
   if (!parsed.success) {

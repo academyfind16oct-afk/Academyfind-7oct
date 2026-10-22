@@ -29,6 +29,21 @@ export const getSession = cache(async () => {
       }
     }
     
+    // Check direct session token from cookies if present
+    const cookieHeader = reqHeaders.get("cookie") || "";
+    const tokenMatch = cookieHeader.match(/(?:af_session_token|better-auth\.session_token)=([^;]+)/);
+    if (tokenMatch) {
+      const rawCookieVal = tokenMatch[1];
+      const token = decodeURIComponent(rawCookieVal).split(".")[0];
+      const session = await prisma.session.findFirst({
+        where: { token },
+        include: { user: true }
+      });
+      if (session && session.expiresAt > new Date()) {
+        return { session, user: session.user };
+      }
+    }
+
     // Fallback to standard Better Auth session (web cookies)
     return await auth.api.getSession({ headers: reqHeaders });
   } catch (error) {

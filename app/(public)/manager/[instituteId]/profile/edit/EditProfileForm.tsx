@@ -54,12 +54,26 @@ export default function EditProfileForm({
     // Image Upload States — Logo / Main Display Image
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string>(institute.imageUrl || institute.logo || "");
-    const showActualImage = imagePreview.includes("cloudinary.com") || imagePreview.startsWith("blob:");
+    const showActualImage = Boolean(
+        imagePreview &&
+        (imagePreview.startsWith("http://") ||
+         imagePreview.startsWith("https://") ||
+         imagePreview.startsWith("blob:") ||
+         imagePreview.startsWith("data:") ||
+         imagePreview.startsWith("/"))
+    );
 
     // Cover / Banner Image
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [coverPreview, setCoverPreview] = useState<string>(institute.coverImage || "");
-    const showActualCover = coverPreview.includes("cloudinary.com") || coverPreview.startsWith("blob:");
+    const showActualCover = Boolean(
+        coverPreview &&
+        (coverPreview.startsWith("http://") ||
+         coverPreview.startsWith("https://") ||
+         coverPreview.startsWith("blob:") ||
+         coverPreview.startsWith("data:") ||
+         coverPreview.startsWith("/"))
+    );
 
     // Category States
     const initialCategories = institute.categories?.map((c: any) => c.categoryId || c.id) || [];
