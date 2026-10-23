@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { debitWallet } from '@/lib/wallet/credit';
 import { WalletTransactionSource } from '@/app/generated/prisma/client';
-import { recordInstituteUnlock } from '@/lib/unlocks/unlock-service';
+import {
+  recordInstituteUnlock,
+  hasUserUnlockedInstituteContact,
+  hasUserUnlockedInstituteCommunity,
+} from '@/lib/unlocks/unlock-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +31,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid amount' }, { status: 400 });
     }
 
+    const targetInstituteId = instituteId || referenceId;
+
+    // 🔒 Idempotency check: If already unlocked, do not debit coins again
+    if (source === "SEE_CONTACT_BASIC_INSTITUTE" && targetInstituteId) {
+      const alreadyUnlocked = await hasUserUnlockedInstituteContact(userId, targetInstituteId);
+      if (alreadyUnlocked) {
+        const userWallet = await prisma.userWallet.findUnique({ where: { userId } });
+        return NextResponse.json({
+          success: true,
+          alreadyUnlocked: true,
+          balance: userWallet?.balance || 0,
+          message: "Contact is already permanently unlocked for your account.",
+        });
+      }
+    }
+
+    if (source === "SEE_COMMUNITY_BASIC_INSTITUTE" && targetInstituteId) {
+      const alreadyUnlocked = await hasUserUnlockedInstituteCommunity(userId, targetInstituteId);
+      if (alreadyUnlocked) {
+        const userWallet = await prisma.userWallet.findUnique({ where: { userId } });
+        return NextResponse.json({
+          success: true,
+          alreadyUnlocked: true,
+          balance: userWallet?.balance || 0,
+          message: "Community features are already permanently unlocked for your account.",
+        });
+      }
+    }
+
     const result = await debitWallet(userId, amount, source as WalletTransactionSource, description, referenceId);
+
 
     if (result && 'success' in result && result.success === false) {
       return NextResponse.json({ success: false, error: result.error || 'Insufficient AF Coins' }, { status: 400 });

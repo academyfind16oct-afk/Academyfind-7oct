@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  hasUserUnlockedInstituteContact,
+  hasUserUnlockedInstituteCommunity,
+} from '@/lib/unlocks/unlock-service';
 
 export async function GET(
   request: NextRequest,
@@ -59,26 +63,15 @@ export async function GET(
     }
 
     if (userId) {
-      const contactUnlockTx = await prisma.walletTransaction.findFirst({
-        where: {
-          wallet: { userId },
-          source: 'SEE_CONTACT_BASIC_INSTITUTE',
-          referenceId: institute.id,
-          type: 'DEBIT',
-        },
-      });
-      if (contactUnlockTx) hasUnlockedBasicFeatures = true;
-
-      const communityUnlockTx = await prisma.walletTransaction.findFirst({
-        where: {
-          wallet: { userId },
-          source: 'SEE_COMMUNITY_BASIC_INSTITUTE',
-          referenceId: institute.id,
-          type: 'DEBIT',
-        },
-      });
-      if (communityUnlockTx) hasUnlockedCommunity = true;
+      const candidateIds = [institute.id, id, institute.slug].filter(Boolean) as string[];
+      const [unlockedContacts, unlockedCommunity] = await Promise.all([
+        hasUserUnlockedInstituteContact(userId, candidateIds),
+        hasUserUnlockedInstituteCommunity(userId, candidateIds),
+      ]);
+      if (unlockedContacts) hasUnlockedBasicFeatures = true;
+      if (unlockedCommunity) hasUnlockedCommunity = true;
     }
+
 
     const plan = institute.subscriptionPlan || 'BASIC';
     const isLockedPlan = plan === 'BASIC' || plan === 'VERIFIED';

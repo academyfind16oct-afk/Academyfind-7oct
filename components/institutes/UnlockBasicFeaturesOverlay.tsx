@@ -48,9 +48,14 @@ export function UnlockBasicFeaturesOverlay({ instituteId, isLoggedIn, title = "F
 
       const data = await res.json();
       if (data.success) {
-        toast.success(`1 AFC deducted. ${title} unlocked!`);
+        if (data.alreadyUnlocked) {
+          toast.success(`${title} is already unlocked for your account!`);
+        } else {
+          toast.success(`1 AFC deducted. ${title} unlocked permanently!`);
+        }
         router.refresh();
       } else {
+
         if (data.error && data.error.includes("Insufficient")) {
           toast((t) => (
             <div className="flex flex-col gap-2">

@@ -20,6 +20,86 @@ export function normalizeUnlockType(rawType?: string, description?: string): str
 }
 
 /**
+ * Checks if a user has permanently unlocked an institute's contacts (phone, email, website, social).
+ * Checks both InstituteUnlock records and WalletTransaction DEBIT history across all candidate institute identifiers.
+ */
+export async function hasUserUnlockedInstituteContact(
+  userId: string,
+  instituteId: string | string[]
+): Promise<boolean> {
+  if (!userId || !instituteId) return false;
+  const candidateIds = (Array.isArray(instituteId) ? instituteId : [instituteId]).filter(Boolean);
+  if (candidateIds.length === 0) return false;
+
+  try {
+    // 1. Check in InstituteUnlock (excluding community unlocks)
+    const unlockRecord = await prisma.instituteUnlock.findFirst({
+      where: {
+        userId,
+        instituteId: { in: candidateIds },
+        unlockType: { not: "COMMUNITY" },
+      },
+      select: { id: true },
+    });
+    if (unlockRecord) return true;
+
+    // 2. Check in WalletTransaction for legacy / direct coin debit
+    const tx = await prisma.walletTransaction.findFirst({
+      where: {
+        wallet: { userId },
+        source: "SEE_CONTACT_BASIC_INSTITUTE",
+        referenceId: { in: candidateIds },
+        type: "DEBIT",
+      },
+      select: { id: true },
+    });
+    return Boolean(tx);
+  } catch (error) {
+    console.error("Error checking institute contact unlock status:", error);
+    return false;
+  }
+}
+
+/**
+ * Checks if a user has permanently unlocked an institute's community / full features.
+ */
+export async function hasUserUnlockedInstituteCommunity(
+  userId: string,
+  instituteId: string | string[]
+): Promise<boolean> {
+  if (!userId || !instituteId) return false;
+  const candidateIds = (Array.isArray(instituteId) ? instituteId : [instituteId]).filter(Boolean);
+  if (candidateIds.length === 0) return false;
+
+  try {
+    const unlockRecord = await prisma.instituteUnlock.findFirst({
+      where: {
+        userId,
+        instituteId: { in: candidateIds },
+        unlockType: "COMMUNITY",
+      },
+      select: { id: true },
+    });
+    if (unlockRecord) return true;
+
+    const tx = await prisma.walletTransaction.findFirst({
+      where: {
+        wallet: { userId },
+        source: "SEE_COMMUNITY_BASIC_INSTITUTE",
+        referenceId: { in: candidateIds },
+        type: "DEBIT",
+      },
+      select: { id: true },
+    });
+    return Boolean(tx);
+  } catch (error) {
+    console.error("Error checking institute community unlock status:", error);
+    return false;
+  }
+}
+
+
+/**
  * Records an institute contact or feature unlock in the database
  * and triggers both Admin and Institute Manager notifications.
  */

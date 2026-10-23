@@ -18,6 +18,11 @@ import { getInstituteById } from "@/lib/institutes/institutes_id";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth/auth";
 import { trackVisitHistory } from "@/lib/User/user/user-activity";
+import {
+  hasUserUnlockedInstituteContact,
+  hasUserUnlockedInstituteCommunity,
+} from "@/lib/unlocks/unlock-service";
+
 
 import Breadcrumb from "@/components/navigation/BreadCrumbs";
 import InstituteMap from "@/components/maps/InstituteMap";
@@ -362,31 +367,20 @@ export default async function InstitutePage({ params }: PageProps) {
   const teacherMembership = userMemberships.find((m: any) => m.role === "TEACHER") ?? null;
   const isOwner = instituteManagers.some((m: any) => m.user.id === userId);
 
-  // Check if current user has already unlocked this institute's contacts with AFC coins
+  // Check if current user has already unlocked this institute's contacts with AFC coins (permanent unlock)
   let hasUnlockedBasicFeatures = false;
   let hasUnlockedCommunity = false;
 
   if (userId) {
-    const contactUnlockTx = await prisma.walletTransaction.findFirst({
-      where: {
-        wallet: { userId },
-        source: "SEE_CONTACT_BASIC_INSTITUTE",
-        referenceId: id,
-        type: "DEBIT"
-      }
-    });
-    if (contactUnlockTx) hasUnlockedBasicFeatures = true;
-
-    const communityUnlockTx = await prisma.walletTransaction.findFirst({
-      where: {
-        wallet: { userId },
-        source: "SEE_COMMUNITY_BASIC_INSTITUTE",
-        referenceId: id,
-        type: "DEBIT"
-      }
-    });
-    if (communityUnlockTx) hasUnlockedCommunity = true;
+    const candidateIds = [institute.id, id, institute.slug].filter(Boolean) as string[];
+    const [unlockedContacts, unlockedCommunity] = await Promise.all([
+      hasUserUnlockedInstituteContact(userId, candidateIds),
+      hasUserUnlockedInstituteCommunity(userId, candidateIds),
+    ]);
+    if (unlockedContacts) hasUnlockedBasicFeatures = true;
+    if (unlockedCommunity) hasUnlockedCommunity = true;
   }
+
 
   // Lock contact details for basic & verified plan institutes (unless already unlocked by user)
   const isContactLocked = (institute.subscriptionPlan === "BASIC" || institute.subscriptionPlan === "VERIFIED") && !hasUnlockedBasicFeatures;
@@ -717,13 +711,13 @@ export default async function InstitutePage({ params }: PageProps) {
                       <div className="flex flex-col gap-3 pt-3 border-t border-slate-200/60 mt-1">
                         <div className="flex flex-col sm:flex-row gap-4">
                           {institute.phone && (
-                            <UnlockContactButton type="phone" hiddenValue="+91 98XXX XX123" realValue={institute.phone} isLoggedIn={!!userId} instituteId={institute.id} />
+                            <UnlockContactButton type="phone" hiddenValue="+91 98XXX XX123" realValue={institute.phone} isLoggedIn={!!userId} instituteId={institute.id} initialUnlocked={hasUnlockedBasicFeatures} />
                           )}
                           {institute.email && (
-                            <UnlockContactButton type="email" hiddenValue="contact@hidden.com" realValue={institute.email} isLoggedIn={!!userId} instituteId={institute.id} />
+                            <UnlockContactButton type="email" hiddenValue="contact@hidden.com" realValue={institute.email} isLoggedIn={!!userId} instituteId={institute.id} initialUnlocked={hasUnlockedBasicFeatures} />
                           )}
                           {institute.website && (
-                            <UnlockContactButton type="website" hiddenValue="Visit Website" realValue={institute.website} isLoggedIn={!!userId} instituteId={institute.id} />
+                            <UnlockContactButton type="website" hiddenValue="Visit Website" realValue={institute.website} isLoggedIn={!!userId} instituteId={institute.id} initialUnlocked={hasUnlockedBasicFeatures} />
                           )}
                         </div>
                         <UnlockContactButton
@@ -741,7 +735,9 @@ export default async function InstitutePage({ params }: PageProps) {
                           isLoggedIn={!!userId}
                           instituteId={institute.id}
                           instituteName={institute.name}
+                          initialUnlocked={hasUnlockedBasicFeatures}
                         />
+
                       </div>
                     ) : (
                       <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lock, Phone, Globe, Mail, Share2, Sparkles } from "lucide-react";
 import { FaFacebook, FaInstagram, FaLinkedin, FaTelegram, FaTwitter, FaWhatsapp, FaYoutube } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
@@ -24,6 +24,7 @@ interface UnlockContactButtonProps {
   isLoggedIn: boolean;
   instituteId: string;
   instituteName?: string;
+  initialUnlocked?: boolean;
 }
 
 export function UnlockContactButton({
@@ -34,12 +35,60 @@ export function UnlockContactButton({
   isLoggedIn,
   instituteId,
   instituteName,
+  initialUnlocked = false,
 }: UnlockContactButtonProps) {
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(Boolean(initialUnlocked));
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Keep contact permanently unlocked across browser reloads, navigation, and sibling contact buttons
+  useEffect(() => {
+    if (initialUnlocked) {
+      setIsUnlocked(true);
+      return;
+    }
+
+    if (typeof window === "undefined" || !instituteId) return;
+
+    // Check localStorage cache for instant zero-latency unlock display
+    try {
+      if (localStorage.getItem(`unlocked_contact_${instituteId}`) === "true") {
+        setIsUnlocked(true);
+      }
+    } catch {}
+
+    // Listen for custom event so when one contact button unlocks, all sibling contact buttons unlock instantly
+    const handleUnlockEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ instituteId: string }>;
+      if (customEvent.detail?.instituteId === instituteId) {
+        setIsUnlocked(true);
+      }
+    };
+
+    window.addEventListener("institute-contact-unlocked", handleUnlockEvent);
+
+    // If logged in and still showing locked, verify in background with server
+    // (covers cases where user unlocked on another page/device or stale ISR cache)
+    if (isLoggedIn && !isUnlocked) {
+      fetch(`/api/wallet/unlock-status?instituteId=${encodeURIComponent(instituteId)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.isContactUnlocked) {
+            setIsUnlocked(true);
+            try {
+              localStorage.setItem(`unlocked_contact_${instituteId}`, "true");
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener("institute-contact-unlocked", handleUnlockEvent);
+    };
+  }, [instituteId, initialUnlocked, isLoggedIn, isUnlocked]);
 
   const handleUnlockClick = () => {
     if (!isLoggedIn) {
@@ -72,7 +121,29 @@ export function UnlockContactButton({
       const data = await res.json();
       if (data.success) {
         setIsUnlocked(true);
-        toast.success(`1 AFC deducted. ${type === "social" ? "Social profiles" : type} unlocked!`);
+        try {
+          localStorage.setItem(`unlocked_contact_${instituteId}`, "true");
+        } catch {}
+
+        // Broadcast event so all contact buttons for this institute immediately open together
+        window.dispatchEvent(
+          new CustomEvent("institute-contact-unlocked", {
+            detail: { instituteId },
+          })
+        );
+
+        if (data.alreadyUnlocked) {
+          toast.success("Contact details are already unlocked for you!");
+        } else {
+          toast.success(
+            `1 AFC deducted. ${
+              type === "social" ? "Social profiles" : type
+            } unlocked permanently!`
+          );
+        }
+
+        // Refresh server components so page renders unmasked contact details
+        router.refresh();
       } else {
         if (data.error && data.error.includes("Insufficient")) {
           toast((t) => (
@@ -103,6 +174,7 @@ export function UnlockContactButton({
 
   // ── 1. UNLOCKED VIEW ──
   if (isUnlocked) {
+
     if (type === "social") {
       const hasAnyLink = socialUrls && (
         socialUrls.instagram ||

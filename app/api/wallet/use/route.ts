@@ -3,7 +3,11 @@ import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
 import { debitWallet } from "@/lib/wallet/credit";
 import { WalletTransactionSource } from "@/app/generated/prisma/client";
-import { recordInstituteUnlock } from "@/lib/unlocks/unlock-service";
+import {
+  recordInstituteUnlock,
+  hasUserUnlockedInstituteContact,
+  hasUserUnlockedInstituteCommunity,
+} from "@/lib/unlocks/unlock-service";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,12 +24,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Invalid amount" }, { status: 400 });
     }
 
+    const targetInstituteId = instituteId || referenceId;
+
+    // 🔒 Idempotency check: If already unlocked, keep it permanently unlocked without deducting coins again
+    if (source === "SEE_CONTACT_BASIC_INSTITUTE" && targetInstituteId) {
+      const alreadyUnlocked = await hasUserUnlockedInstituteContact(userId, targetInstituteId);
+      if (alreadyUnlocked) {
+        return NextResponse.json({
+          success: true,
+          alreadyUnlocked: true,
+          message: "Contact is already permanently unlocked for your account.",
+        });
+      }
+    }
+
+    if (source === "SEE_COMMUNITY_BASIC_INSTITUTE" && targetInstituteId) {
+      const alreadyUnlocked = await hasUserUnlockedInstituteCommunity(userId, targetInstituteId);
+      if (alreadyUnlocked) {
+        return NextResponse.json({
+          success: true,
+          alreadyUnlocked: true,
+          message: "Community features are already permanently unlocked for your account.",
+        });
+      }
+    }
+
     if (!Object.values(WalletTransactionSource).includes(source)) {
         // Just bypass this strict enum check for flexibility or map it correctly.
         // Assuming the schema enum is updated, if not it will throw an error at Prisma level.
     }
 
     const result = await debitWallet(userId, amount, source as WalletTransactionSource, description, referenceId);
+
 
     if (result && "success" in result && result.success === false) {
       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
