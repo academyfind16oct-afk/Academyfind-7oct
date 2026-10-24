@@ -5,18 +5,22 @@ import path from "path";
 import fs from "fs";
 import dotenv from "dotenv";
 
-dotenv.config();
-
 if (!process.env.DATABASE_URL) {
-  const candidatePaths = [
-    path.resolve(process.cwd(), ".env"),
-    path.resolve(process.cwd(), "../.env"),
-    path.resolve(__dirname, "../.env"),
-  ];
-  for (const envPath of candidatePaths) {
-    if (fs.existsSync(envPath)) {
-      dotenv.config({ path: envPath });
-      if (process.env.DATABASE_URL) break;
+  dotenv.config();
+  if (!process.env.DATABASE_URL && process.env.NODE_ENV !== "production") {
+    try {
+      const candidatePaths = [
+        path.resolve(process.cwd(), ".env"),
+        path.resolve(process.cwd(), "../.env"),
+      ];
+      for (const envPath of candidatePaths) {
+        if (fs.existsSync(envPath)) {
+          dotenv.config({ path: envPath });
+          if (process.env.DATABASE_URL) break;
+        }
+      }
+    } catch {
+      // Ignore in bundled runtime
     }
   }
 }

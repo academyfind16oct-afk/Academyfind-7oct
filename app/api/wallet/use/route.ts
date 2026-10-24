@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Record Institute Unlock and dispatch notifications if this was an institute contact/feature unlock
-    const targetInstituteId = instituteId || referenceId;
     const isInstituteUnlock =
       source === "SEE_CONTACT_BASIC_INSTITUTE" ||
       source === "SEE_COMMUNITY_BASIC_INSTITUTE" ||
