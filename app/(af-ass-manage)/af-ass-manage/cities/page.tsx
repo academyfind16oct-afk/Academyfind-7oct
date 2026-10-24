@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma"
-import { MapPin, Plus, Map, Edit } from "lucide-react"
+import { MapPin, Map } from "lucide-react"
+import AddCityModal from "@/components/admin/AddCityModal"
+import EditCityModal from "@/components/admin/EditCityModal"
 
 export default async function AdminCitiesPage() {
     // 🚀 Fetch all cities and count the institutes linked to each city
@@ -30,10 +32,8 @@ export default async function AdminCitiesPage() {
                     <div className="bg-rose-50 text-rose-700 px-4 py-2 rounded-xl font-bold text-sm">
                         Total Cities: {cities.length}
                     </div>
-                    {/* Add City Button (Future Implementation) */}
-                    <button className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
-                        <Plus className="w-4 h-4" /> Add City
-                    </button>
+                    {/* Add City Modal Trigger */}
+                    <AddCityModal />
                 </div>
             </div>
 
@@ -97,9 +97,7 @@ export default async function AdminCitiesPage() {
 
                                         {/* 4. Action Buttons */}
                                         <td className="p-4 text-right">
-                                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-bold transition-all">
-                                                <Edit className="w-3.5 h-3.5" /> Edit
-                                            </button>
+                                            <EditCityModal city={city} />
                                         </td>
                                         
                                     </tr>
