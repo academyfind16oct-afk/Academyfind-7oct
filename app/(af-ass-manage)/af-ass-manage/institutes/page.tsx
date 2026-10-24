@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { Building2, Edit, MapPin, Plus, Eye } from "lucide-react"
+import { Building2, Edit, MapPin, Plus, Eye, ShieldCheck, Users, Building } from "lucide-react"
 import ToggleStatusButton from "@/components/admin/AdminToggleButton"
 import InstituteFilters from "@/components/admin/AdminInstituteFilters"
 import InstitutePagination from "@/components/admin/AdminInstitutePagination"
@@ -22,9 +22,10 @@ export default async function AdminInstitutesPage({
     const categoryId = typeof params.categoryId === 'string' ? params.categoryId : '';
     const subscriptionPlan = typeof params.subscriptionPlan === 'string' ? params.subscriptionPlan : '';
 
-    // 🆕 Naye params sort aur status ke liye
+    // 🆕 Params for sort, status, and ownership/approval
     const status = typeof params.status === 'string' ? params.status : 'all';
     const sortBy = typeof params.sortBy === 'string' ? params.sortBy : 'newest';
+    const ownership = typeof params.ownership === 'string' ? params.ownership : 'all';
 
     // 2. Dynamic Prisma Filters Build Karna
     const whereCondition: any = {};
@@ -51,6 +52,31 @@ export default async function AdminInstitutesPage({
         whereCondition.subscriptionPlan = subscriptionPlan;
     }
 
+    // 🛡️ Ownership & Approval Filtering Logic
+    if (ownership === 'approved_all') {
+        whereCondition.OR = [
+            { claims: { some: { status: 'APPROVED' } } },
+            { instituteRequest: { status: 'APPROVED' } }
+        ];
+    } else if (ownership === 'approved_claims') {
+        whereCondition.claims = { some: { status: 'APPROVED' } };
+    } else if (ownership === 'approved_requests') {
+        whereCondition.instituteRequest = { status: 'APPROVED' };
+    } else if (ownership === 'has_managers') {
+        whereCondition.managers = { some: {} };
+    } else if (ownership === 'unclaimed') {
+        whereCondition.AND = [
+            { claims: { none: { status: 'APPROVED' } } },
+            {
+                OR: [
+                    { instituteRequest: null },
+                    { instituteRequest: { status: { not: 'APPROVED' } } }
+                ]
+            },
+            { managers: { none: {} } }
+        ];
+    }
+
     // 🆕 Sorting Logic
     let orderByCondition: any = { createdAt: 'desc' }; // Default
     if (sortBy === 'views') orderByCondition = { viewCount: 'desc' }; // Sabse zyada views wale upar
@@ -66,9 +92,17 @@ export default async function AdminInstitutesPage({
             skip: (page - 1) * limit,
             include: {
                 city: true,
-                _count: { select: { managers: true } }
+                _count: { select: { managers: true, claims: true } },
+                claims: {
+                    where: { status: 'APPROVED' },
+                    take: 1,
+                    select: { id: true, status: true, fullName: true, email: true }
+                },
+                instituteRequest: {
+                    select: { id: true, status: true, ownerName: true }
+                }
             },
-            orderBy: orderByCondition // 👈 Yahan dynamically sort pass kiya hai
+            orderBy: orderByCondition
         }),
 
         prisma.city.findMany({ orderBy: { name: 'asc' } }),
@@ -85,7 +119,14 @@ export default async function AdminInstitutesPage({
                     <h1 className="text-3xl font-extrabold text-stone-900 flex items-center gap-2">
                         <Building2 className="w-8 h-8 text-stone-800" /> All Institutes
                     </h1>
-                    <p className="text-stone-500 mt-1">Found {totalInstitutes} matching institutes.</p>
+                    <p className="text-stone-500 mt-1">
+                        Found <span className="font-bold text-stone-800">{totalInstitutes}</span> matching institutes
+                        {ownership === 'approved_all' && <span className="font-bold text-amber-700"> (⭐ Approved Claims & Owner-Created)</span>}
+                        {ownership === 'approved_claims' && <span className="font-bold text-emerald-700"> (✓ Approved Claims Only)</span>}
+                        {ownership === 'approved_requests' && <span className="font-bold text-blue-700"> (🏢 Owner-Created & Approved)</span>}
+                        {ownership === 'has_managers' && <span className="font-bold text-purple-700"> (👤 Has Assigned Managers)</span>}
+                        {ownership === 'unclaimed' && <span className="font-bold text-stone-600"> (🌐 Unclaimed / Seeded Only)</span>}.
+                    </p>
                 </div>
             </div>
 
@@ -100,7 +141,6 @@ export default async function AdminInstitutesPage({
             </div>
 
             {/* 🚀 Filter Component Inserted Here */}
-            {/* Aap apne InstituteFilters component me status aur sortBy UI add kar sakte hain */}
             <InstituteFilters cities={cities} categories={categories} />
 
             {/* Data Table */}
@@ -125,13 +165,31 @@ export default async function AdminInstitutesPage({
                                 institutes.map((institute: any) => (
                                     <tr key={institute.id} className={`hover:bg-stone-50/50 transition-colors ${!institute.isActive ? 'opacity-70' : ''}`}>
                                         <td className="p-4">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <div className="font-bold text-stone-800 text-base">{institute.name}</div>
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${institute.providerType === 'INDIVIDUAL' ? 'bg-stone-100 text-stone-700 border border-stone-200 shadow-sm' : 'bg-stone-800 text-stone-100 border border-stone-900 shadow-sm'}`}>
                                                     {institute.providerType || 'INSTITUTE'}
                                                 </span>
                                             </div>
                                             <div className="text-xs text-stone-500 mt-1 font-medium">{institute.email || "No Email"}</div>
+
+                                            {/* Ownership & Claim Badges */}
+                                            {((institute.claims && institute.claims.length > 0) || institute.instituteRequest?.status === 'APPROVED') && (
+                                                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                                    {institute.claims && institute.claims.length > 0 && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 shadow-2xs">
+                                                            <ShieldCheck className="w-3 h-3 text-amber-600" />
+                                                            Claim Approved{institute.claims[0].fullName ? `: ${institute.claims[0].fullName}` : ''}
+                                                        </span>
+                                                    )}
+                                                    {institute.instituteRequest?.status === 'APPROVED' && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 shadow-2xs">
+                                                            <Building className="w-3 h-3 text-blue-600" />
+                                                            Owner-Created & Approved{institute.instituteRequest.ownerName ? `: ${institute.instituteRequest.ownerName}` : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             <div className="flex items-center gap-1.5 mt-2 text-xs font-bold text-stone-600 bg-stone-100 w-fit px-2 py-1 rounded-md border border-stone-200">
                                                 <Eye className="w-3.5 h-3.5 text-stone-500" />
@@ -143,10 +201,20 @@ export default async function AdminInstitutesPage({
                                                 <MapPin className="w-4 h-4 text-stone-400" /> {institute.city.name}
                                             </div>
                                         </td>
-                                        <td className="p-4 text-center space-y-2">
-                                            <span className="inline-block bg-stone-100 text-stone-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-stone-200 shadow-sm">
-                                                {institute.subscriptionPlan}
-                                            </span>
+                                        <td className="p-4 text-center space-y-1.5">
+                                            <div>
+                                                <span className="inline-block bg-stone-100 text-stone-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-stone-200 shadow-sm">
+                                                    {institute.subscriptionPlan}
+                                                </span>
+                                            </div>
+                                            {institute._count?.managers > 0 ? (
+                                                <div className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                                    <Users className="w-3 h-3 text-emerald-600" />
+                                                    <span>{institute._count.managers} {institute._count.managers === 1 ? 'Manager' : 'Managers'}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="text-[10px] text-stone-400 font-medium">0 Managers</div>
+                                            )}
                                         </td>
                                         <td className="p-4">
                                             <div className="flex flex-col gap-2">
