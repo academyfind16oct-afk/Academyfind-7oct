@@ -50,8 +50,11 @@ export default async function CompareHubPage() {
           <div className="mx-auto mt-10 flex max-w-md items-center justify-center gap-8 border-t border-stone-100 pt-6 text-stone-400">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              <span className="text-sm font-semibold tabular-nums text-stone-600">
-                {instituteCount.toLocaleString('en-IN')}+
+              <span 
+                title={`${instituteCount.toLocaleString('en-IN')}+ institutes`}
+                className="text-sm font-semibold tabular-nums text-stone-600"
+              >
+                {instituteCount >= 100000 ? `${(instituteCount / 100000).toFixed(1)}L+` : `${instituteCount.toLocaleString('en-IN')}+`}
               </span>
               <span className="text-xs">institutes</span>
             </div>

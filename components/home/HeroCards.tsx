@@ -22,9 +22,25 @@ export default async function HeroCards() {
   
 
   // 3. DEFINE CARDS DATA (Badge property add kar di hai)
-  const statsData = [
+  const statsData: Array<{
+    title: string;
+    value: number;
+    icon: any;
+    suffix?: string;
+    decimals?: number;
+    link?: string;
+    format?: "indianCompact" | "standard";
+    tooltip?: string;
+  }> = [
     { title: "Categories", value: categoryCount, icon: Layers3, suffix: "" , link: "/categories"},
-    { title: "Institutes", value: instituteCount, icon: Building2, suffix: "" },
+    { 
+      title: "Institutes", 
+      value: instituteCount, 
+      icon: Building2, 
+      suffix: "",
+      format: "indianCompact",
+      tooltip: `${instituteCount.toLocaleString('en-IN')}+ Verified Coaching Institutes`
+    },
     { 
       title: "Cities", 
       value: cityCount, 
@@ -56,8 +72,13 @@ export default async function HeroCards() {
                 </p>
               </div>
 
-              <h3 className="mt-1 sm:mt-2 text-2xl sm:text-4xl font-extrabold text-slate-800">
-                <AnimatedCounter value={item.value} decimals={item.decimals} suffix={item.suffix} />
+              <h3 className="mt-1 sm:mt-2 text-2xl sm:text-4xl font-extrabold text-slate-800 tracking-tight">
+                <AnimatedCounter 
+                  value={item.value} 
+                  decimals={item.decimals} 
+                  suffix={item.suffix} 
+                  format={item.format}
+                />
               </h3>
             </>
           );
@@ -69,6 +90,7 @@ export default async function HeroCards() {
                 href={item.link}
                 key={item.title}
                 prefetch={false}
+                title={item.tooltip}
                 className="group block rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-amber-300 cursor-pointer"
               >
                 {CardContent}
@@ -80,6 +102,7 @@ export default async function HeroCards() {
           return (
             <div
               key={item.title}
+              title={item.tooltip}
               className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
             >
               {CardContent}
