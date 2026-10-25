@@ -144,16 +144,17 @@ export function HeroSection() {
           <div className="hero-stagger mt-5 mb-2">
             <Link
               href="/find-my-academy"
-              className="group inline-flex items-center gap-2.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 px-5 py-2 text-xs sm:text-sm font-bold text-amber-900 shadow-xs backdrop-blur-md hover:border-amber-400 hover:bg-white hover:shadow-md hover:-translate-y-0.5 transition-all"
+              className="group inline-flex items-center gap-2 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 px-4 py-2 sm:px-5 sm:py-2 text-xs sm:text-sm font-semibold text-amber-950 shadow-xs backdrop-blur-md hover:border-amber-400 hover:bg-white/90 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
               <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <Sparkles className="size-4 text-amber-500 group-hover:rotate-12 transition-transform" />
+              <Sparkles className="size-4 text-amber-600 group-hover:rotate-12 transition-transform duration-200" />
               <span>
-                Confused which coaching suits you?{' '}
-                <span className="text-amber-600 underline underline-offset-2">
-                  Ask AI Counselor (Top 3 Institutes for You) →
+                Not sure where to start?{' '}
+                <span className="font-bold text-amber-700 group-hover:text-amber-800 transition-colors">
+                  Let AI find your perfect match in 60s
                 </span>
               </span>
+              <ArrowRight className="size-3.5 text-amber-600 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           </div>
 
