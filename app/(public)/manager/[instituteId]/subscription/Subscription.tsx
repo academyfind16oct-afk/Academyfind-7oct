@@ -242,6 +242,36 @@ export default function SubscriptionClient({
         </div>
       </div>
 
+      {/* 🪔 Diwali Special Announcement Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 p-5 sm:p-6 text-white shadow-xl shadow-orange-500/20 mb-4 flex flex-col sm:flex-row items-center justify-between gap-5 border border-amber-300/40">
+        <div className="flex items-center gap-4 text-center sm:text-left">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 shadow-inner">
+            🪔
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/25 text-white font-extrabold text-[10px] uppercase tracking-wider mb-1">
+              Limited Time Diwali Special
+            </div>
+            <h3 className="text-lg sm:text-xl font-black tracking-tight">
+              Diwali Dhamaka: Verified Annual Plan is 100% FREE!
+            </h3>
+            <p className="text-xs sm:text-sm text-amber-100 font-medium mt-0.5">
+              Get the official Verified Badge, edit your full institute profile, and capture direct student leads at zero cost for 1 full year.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setIsAnnual(true);
+            handleCheckout("VERIFIED");
+          }}
+          className="whitespace-nowrap px-6 py-3 rounded-2xl bg-white text-amber-950 font-black text-sm hover:bg-amber-50 shadow-lg hover:shadow-xl transition-all active:scale-95 cursor-pointer"
+        >
+          Claim Free Now →
+        </button>
+      </div>
+
       {/* 🚀 Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-2">
         {SUBSCRIPTION_PLANS.map((plan: PlanConfig) => {
@@ -259,11 +289,20 @@ export default function SubscriptionClient({
             <div
               key={plan.id}
               className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 bg-white ${
-                isPremium
+                isVerified && isAnnual
+                  ? "border-2 border-orange-400 shadow-xl shadow-orange-200/40 md:-translate-y-1 z-10"
+                  : isPremium
                   ? "border-2 border-amber-400 shadow-xl shadow-amber-200/40 md:-translate-y-2 z-10"
                   : "border border-slate-200/90 shadow-sm hover:border-amber-300 hover:shadow-md"
               }`}
             >
+              {/* Diwali Top Badge for Verified Annual */}
+              {isVerified && isAnnual && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider px-4 py-1 rounded-full shadow-md flex items-center gap-1.5 whitespace-nowrap z-10">
+                  <span>🪔 DIWALI SPECIAL • 100% FREE</span>
+                </div>
+              )}
+
               {/* Crown / Top Badge for Premium */}
               {isPremium && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 font-black text-[10px] sm:text-xs uppercase tracking-wider px-5 py-1 rounded-full shadow-sm flex items-center gap-1.5">
@@ -294,19 +333,38 @@ export default function SubscriptionClient({
                 {/* Pricing Area */}
                 <div className="mt-5 mb-6 pb-5 border-b border-slate-100">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-3xl sm:text-4xl font-black text-amber-500 tracking-tight">
-                      ₹{priceData.offer.toLocaleString("en-IN")}
-                    </span>
-                    <span className="text-sm font-semibold text-slate-500">
-                      /{isAnnual ? "yr" : "mo"}
-                    </span>
+                    {priceData.offer === 0 ? (
+                      <>
+                        <span className="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight">
+                          FREE
+                        </span>
+                        <span className="text-sm font-semibold text-slate-500">
+                          /1st year
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-3xl sm:text-4xl font-black text-amber-500 tracking-tight">
+                          ₹{priceData.offer.toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-500">
+                          /{isAnnual ? "yr" : "mo"}
+                        </span>
+                      </>
+                    )}
 
                     {/* Annual Save Pill */}
                     {isAnnual && (
-                      <span className="ml-auto bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap">
-                        Save with
-                        <br />
-                        Annual Plan
+                      <span className={`ml-auto text-[10px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap ${
+                        isVerified && priceData.offer === 0
+                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black shadow-xs"
+                          : "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                      }`}>
+                        {isVerified && priceData.offer === 0 ? (
+                          <>🪔 Diwali Offer</>
+                        ) : (
+                          <>Save with<br />Annual Plan</>
+                        )}
                       </span>
                     )}
                   </div>
@@ -314,7 +372,7 @@ export default function SubscriptionClient({
                   {/* Strikethrough original price if Annual */}
                   {isAnnual && priceData.original && (
                     <div className="text-xs text-slate-400 font-semibold line-through mt-0.5">
-                      ₹{priceData.original.toLocaleString("en-IN")}
+                      ₹{priceData.original.toLocaleString("en-IN")}{priceData.offer === 0 ? "/yr (Limited Time)" : ""}
                     </div>
                   )}
                 </div>
@@ -337,6 +395,8 @@ export default function SubscriptionClient({
                       ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
                       : currentPlanRank > (planPriority[plan.id] ?? 0)
                       ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : isVerified && isAnnual
+                      ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-500/25 active:scale-95"
                       : isVerified
                       ? "bg-white border-2 border-amber-400 text-slate-900 hover:bg-amber-400 shadow-xs hover:shadow-md"
                       : "bg-amber-400 hover:bg-amber-500 text-slate-950 shadow-md hover:shadow-lg shadow-amber-400/20"
@@ -350,6 +410,8 @@ export default function SubscriptionClient({
                       : "Switch to Monthly"
                     : currentPlanRank > (planPriority[plan.id] ?? 0)
                     ? "Included in current plan"
+                    : isVerified && isAnnual
+                    ? "Claim Free Diwali Offer 🪔"
                     : plan.actionText}
                 </Button>
               </div>

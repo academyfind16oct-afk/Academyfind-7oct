@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { format, addDays, addYears } from "date-fns";
-import { CreditCard, QrCode, UploadCloud, Loader2, Ticket, CheckCircle2, X, ArrowDownCircle, Landmark } from "lucide-react";
+import { CreditCard, QrCode, UploadCloud, Loader2, Ticket, CheckCircle2, X, ArrowDownCircle, Landmark, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
-import { submitPaymentProof } from "@/lib/User/manager/subscription";
+import { submitPaymentProof, activateFreePlan } from "@/lib/User/manager/subscription";
 import { Button } from "../ui/button";
 import Image from "next/image";
 
@@ -105,6 +105,19 @@ export default function CheckoutForm({
     setIsLoading(false);
   };
 
+  const handleFreeActivation = async () => {
+    setIsLoading(true);
+    const res = await activateFreePlan(instituteId, plan.id);
+    if (res.success) {
+      toast.success(res.message || "Plan activated!");
+      setIsSuccessModalOpen(true);
+    } else {
+      setFailReason(res.error || "Failed to activate free plan.");
+      setIsFailModalOpen(true);
+    }
+    setIsLoading(false);
+  };
+
   if (!mounted) {
     return <div className="p-10 text-center text-slate-500">Initializing checkout...</div>;
   }
@@ -120,7 +133,7 @@ export default function CheckoutForm({
             <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <X className="w-10 h-10 text-rose-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Submission Failed</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Activation Failed</h2>
             <p className="text-slate-600 mb-8 leading-relaxed">
               {failReason} Please check your connection and try again, or contact support if the issue persists.
             </p>
@@ -141,9 +154,19 @@ export default function CheckoutForm({
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Payment Under Review!</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">
+              {finalPrice === 0 ? "🎉 Plan Activated Free!" : "Payment Under Review!"}
+            </h2>
             <p className="text-slate-600 mb-8 leading-relaxed">
-              Your payment proof has been successfully submitted. Our team will verify it and activate your <strong>{plan.name}</strong> plan shortly. You will be notified once the review is complete.
+              {finalPrice === 0 ? (
+                <>
+                  🪔 Happy Diwali! Your <strong>{plan.name}</strong> Annual plan is now active for 1 full year at zero cost. Your verified badge, lead capture, and management features are live immediately!
+                </>
+              ) : (
+                <>
+                  Your payment proof has been successfully submitted. Our team will verify it and activate your <strong>{plan.name}</strong> plan shortly. You will be notified once the review is complete.
+                </>
+              )}
             </p>
             <Button 
               onClick={() => {
@@ -152,7 +175,7 @@ export default function CheckoutForm({
               }} 
               className="w-full py-4 text-base font-bold bg-slate-900 hover:bg-slate-800 rounded-xl"
             >
-              Back to Subscriptions
+              Go to Manager Dashboard
             </Button>
           </div>
         </div>
@@ -246,15 +269,67 @@ export default function CheckoutForm({
               <span>- ₹{discountAmount.toLocaleString("en-IN")}</span>
             </div>
           )}
-          {/* Total Price text reduced (text-5xl -> text-3xl, pt-6 -> pt-4) */}
+          {/* Total Price */}
           <div className="flex justify-between items-center border-t border-slate-100 pt-4 mt-3">
-            <span className="font-bold text-slate-800 text-lg">Total To Pay</span>
-            <span className="text-3xl font-black text-blue-600">₹{finalPrice.toLocaleString("en-IN")}</span>
+            <div>
+              <span className="font-bold text-slate-800 text-lg block">Total To Pay</span>
+              {finalPrice === 0 && (
+                <span className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5">
+                  🪔 Diwali Special (100% Free - Limited Time)
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              {finalPrice === 0 && (
+                <span className="text-xs text-slate-400 line-through block font-medium">₹2,999</span>
+              )}
+              <span className={`text-3xl font-black ${finalPrice === 0 ? "text-emerald-600" : "text-blue-600"}`}>
+                ₹{finalPrice.toLocaleString("en-IN")}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 🟡 STEP 2: BIG QR CODE CARD (Keeping this Big & Prominent) */}
+      {/* 🪔 DIWALI FREE ACTIVATION vs REGULAR PAYMENT STEPS */}
+      {finalPrice === 0 ? (
+        <div className="rounded-3xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100/70 shadow-xl p-8 md:p-12 text-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+          <div className="max-w-md mx-auto space-y-6">
+            <div className="w-20 h-20 rounded-3xl bg-amber-400 text-amber-950 flex items-center justify-center mx-auto text-4xl shadow-lg shadow-amber-300/50">
+              🪔
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-200/80 text-amber-900 text-xs font-black uppercase tracking-wider shadow-xs">
+              Limited Time Diwali Celebration
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Happy Diwali! 100% Free
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed font-medium">
+              As part of our Diwali Celebration offer, your 1-Year <strong>{plan.name}</strong> membership is completely free. No UPI transfer, bank details, or UTR verification needed!
+            </p>
+            <div className="pt-2">
+              <Button
+                type="button"
+                disabled={isLoading}
+                onClick={handleFreeActivation}
+                className="w-full py-6 text-base font-black bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-2xl shadow-lg shadow-amber-500/30 hover:scale-[1.01] transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" /> Activating Free Plan...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" /> Claim 1-Year Free Verified Membership
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* 🟡 STEP 2: BIG QR CODE CARD (Keeping this Big & Prominent) */}
       <div className="rounded-3xl border border-slate-200 bg-slate-900 shadow-xl p-8 md:p-10 text-center relative overflow-hidden">
         {/* Glow reduced a bit */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-80 bg-blue-500/20 blur-[80px] rounded-full pointer-events-none"></div>
@@ -442,6 +517,8 @@ export default function CheckoutForm({
           </Button>
         </div>
       </form>
+      </>
+      )}
 
     </div>
   );

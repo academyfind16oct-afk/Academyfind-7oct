@@ -69,3 +69,70 @@ export async function submitPaymentProof(instituteId: string, formData: FormData
         return { success: false, error: "Failed to submit transaction details." };
     }
 }
+
+export async function activateFreePlan(instituteId: string, planId: string = "VERIFIED") {
+    try {
+        if (!instituteId) {
+            return { success: false, error: "Institute ID is missing." };
+        }
+        if (planId !== "VERIFIED") {
+            return { success: false, error: "Only Verified Annual plan is eligible for free Diwali activation." };
+        }
+
+        const institute = await prisma.institute.findUnique({
+            where: { id: instituteId },
+            select: { id: true, name: true, subscriptionPlan: true }
+        });
+
+        if (!institute) {
+            return { success: false, error: "Institute not found." };
+        }
+
+        const expiryDate = new Date();
+        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+        const utrNumber = `DIWALI-FREE-${instituteId.slice(-6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+
+        await prisma.$transaction([
+            prisma.subscriptionPayment.create({
+                data: {
+                    instituteId,
+                    planRequested: "VERIFIED",
+                    billingCycle: "ANNUAL",
+                    amountPaid: 0,
+                    utrNumber,
+                    status: "APPROVED",
+                }
+            }),
+            prisma.institute.update({
+                where: { id: instituteId },
+                data: {
+                    subscriptionPlan: "VERIFIED",
+                    planWeight: 2,
+                    planExpiresAt: expiryDate,
+                    isVerified: true,
+                }
+            })
+        ]);
+
+        try {
+            const { syncSingleInstituteToMeili } = await import("@/scripts/SyncInstitute");
+            await syncSingleInstituteToMeili(instituteId);
+        } catch (syncErr) {
+            console.warn("Meili sync warning during free plan activation:", syncErr);
+        }
+
+        revalidatePath(`/manager/${instituteId}/subscription`);
+        revalidatePath(`/manager/${instituteId}`);
+        revalidatePath(`/institute/${instituteId}`);
+        revalidatePath("/");
+
+        return {
+            success: true,
+            message: `🪔 Happy Diwali! Verified Annual Plan activated for ${institute.name} (Free for 1 Year)!`
+        };
+    } catch (error: any) {
+        console.error("Free Plan Activation Error:", error);
+        return { success: false, error: error?.message || "Failed to activate free plan." };
+    }
+}

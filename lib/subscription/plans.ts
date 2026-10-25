@@ -24,11 +24,13 @@ export const SUBSCRIPTION_PLANS: PlanConfig[] = [
   {
     id: "VERIFIED",
     name: "Verified",
-    desc: "Build trust and start capturing student leads.",
-    actionText: "Get Started",
+    desc: "Build trust, get verified badge, and start capturing student leads.",
+    topBadge: "🪔 DIWALI SPECIAL • 100% FREE",
+    badge: "LIMITED TIME OFFER",
+    actionText: "Claim Free Diwali Offer",
     pricing: {
       monthly: { offer: 199 },
-      annual: { original: 2999, offer: 1999 },
+      annual: { original: 2999, offer: 0 },
     },
     features: [
       { text: "Edit your profile" },

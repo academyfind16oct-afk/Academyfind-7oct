@@ -13,9 +13,10 @@ const OFFICIAL_PLANS = [
   {
     id: "VERIFIED",
     name: "Verified",
+    badge: "🪔 DIWALI SPECIAL • 100% FREE",
     pricing: {
       monthly: { original: 499, offer: 199 },
-      annual: { original: 2999, offer: 1999 },
+      annual: { original: 2999, offer: 0 },
     },
     desc: "Build trust and start capturing student leads.",
     features: [
@@ -229,11 +230,58 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Invalid plan selected." }, { status: 400 });
     }
 
-    if (!utrNumber || utrNumber.length < 6) {
+    const isFreeDiwaliOffer = planRequested === "VERIFIED" && billingCycle === "ANNUAL" && amountPaid === 0;
+
+    if (!isFreeDiwaliOffer && (!utrNumber || utrNumber.length < 6)) {
       return NextResponse.json(
         { success: false, error: "Please enter a valid Transaction ID / UTR Number (minimum 6 digits)." },
         { status: 400 }
       );
+    }
+
+    if (isFreeDiwaliOffer && !utrNumber) {
+      utrNumber = `DIWALI-FREE-${instituteId.slice(-6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+    }
+
+    if (isFreeDiwaliOffer) {
+      const expiryDate = new Date();
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+      const [newPayment] = await prisma.$transaction([
+        prisma.subscriptionPayment.create({
+          data: {
+            instituteId,
+            userId,
+            planRequested: "VERIFIED",
+            billingCycle: "ANNUAL",
+            amountPaid: 0,
+            utrNumber,
+            status: "APPROVED",
+          },
+        }),
+        prisma.institute.update({
+          where: { id: instituteId },
+          data: {
+            subscriptionPlan: "VERIFIED",
+            planWeight: 2,
+            planExpiresAt: expiryDate,
+            isVerified: true,
+          },
+        }),
+      ]);
+
+      try {
+        const { syncSingleInstituteToMeili } = await import("@/scripts/SyncInstitute");
+        await syncSingleInstituteToMeili(instituteId);
+      } catch (e) {
+        console.warn("Meili sync warning:", e);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "🪔 Happy Diwali! Verified Annual Plan activated for 1 Year for free!",
+        data: newPayment,
+      });
     }
 
     // Check if UTR already exists

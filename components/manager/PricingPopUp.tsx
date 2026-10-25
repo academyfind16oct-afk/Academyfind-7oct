@@ -227,11 +227,20 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
               <div
                 key={plan.id}
                 className={`relative rounded-3xl p-5 flex flex-col justify-between transition-all duration-300 bg-white min-w-0 ${
-                  isPremium
+                  isVerified && isAnnual
+                    ? "border-2 border-orange-400 shadow-xl shadow-orange-200/30"
+                    : isPremium
                     ? "border-2 border-amber-400 shadow-xl shadow-amber-200/30"
                     : "border border-slate-200 shadow-sm hover:border-amber-300"
                 }`}
               >
+                {/* Diwali Top Badge for Verified Annual */}
+                {isVerified && isAnnual && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-[9px] uppercase tracking-wider px-3.5 py-0.5 rounded-full shadow-md flex items-center gap-1 z-10 whitespace-nowrap">
+                    <span>🪔 DIWALI SPECIAL • 100% FREE</span>
+                  </div>
+                )}
+
                 {/* Crown badge for Premium */}
                 {isPremium && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider px-4 py-1 rounded-full shadow-sm flex items-center gap-1 z-10">
@@ -259,24 +268,41 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
                   <div className="mt-4 mb-4 pb-4 border-b border-slate-100">
                     <div className="flex flex-wrap items-baseline justify-between gap-1.5">
                       <div className="flex items-baseline gap-1">
-                        <span className="text-2xl sm:text-3xl font-black text-amber-500 tracking-tight">
-                          ₹{priceData.offer.toLocaleString("en-IN")}
-                        </span>
-                        <span className="text-xs font-semibold text-slate-500">
-                          /{isAnnual ? "yr" : "mo"}
-                        </span>
+                        {priceData.offer === 0 ? (
+                          <>
+                            <span className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight">
+                              FREE
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500">
+                              /1st yr
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-2xl sm:text-3xl font-black text-amber-500 tracking-tight">
+                              ₹{priceData.offer.toLocaleString("en-IN")}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500">
+                              /{isAnnual ? "yr" : "mo"}
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       {isAnnual && (
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap">
-                          Save with Annual
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                          isVerified && priceData.offer === 0
+                            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        }`}>
+                          {isVerified && priceData.offer === 0 ? "🪔 Diwali Offer" : "Save with Annual"}
                         </span>
                       )}
                     </div>
 
                     {isAnnual && priceData.original && (
                       <div className="text-[11px] text-slate-400 font-semibold line-through mt-0.5">
-                        ₹{priceData.original.toLocaleString("en-IN")}
+                        ₹{priceData.original.toLocaleString("en-IN")}{priceData.offer === 0 ? " (Limited Time)" : ""}
                       </div>
                     )}
                   </div>
@@ -291,12 +317,14 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
                 <div className="pt-2">
                   <div
                     className={`w-full py-3 rounded-2xl font-black text-center text-xs sm:text-sm ${
-                      isVerified
+                      isVerified && isAnnual
+                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/20"
+                        : isVerified
                         ? "bg-white border-2 border-amber-400 text-slate-900"
                         : "bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20"
                     }`}
                   >
-                    {plan.actionText}
+                    {isVerified && isAnnual ? "Claim Free Diwali Offer 🪔" : plan.actionText}
                   </div>
                 </div>
               </div>
