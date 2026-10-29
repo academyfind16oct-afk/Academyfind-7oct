@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,6 +50,8 @@ type AdminBlogPageProps = {
     query?: string;
     status?: string;
     brand?: string;
+    sort?: string;
+    sortBy?: string;
   }>;
 };
 
@@ -95,6 +98,7 @@ export default async function AdminBlogPage({
     : undefined;
 
   const brandId = params.brand && params.brand !== ALL ? params.brand : undefined;
+  const sort = params.sort || params.sortBy || "latest";
 
   const where = {
     ...(query
@@ -109,10 +113,26 @@ export default async function AdminBlogPage({
     ...(brandId ? { brandId } : {}),
   };
 
+  const orderBy: any = (() => {
+    switch (sort) {
+      case "views":
+      case "most_viewed":
+        return [{ viewCount: "desc" }, { updatedAt: "desc" }];
+      case "oldest":
+        return [{ createdAt: "asc" }];
+      case "comments":
+      case "most_commented":
+        return [{ commentCount: "desc" }, { updatedAt: "desc" }];
+      case "latest":
+      default:
+        return [{ isPinned: "desc" }, { updatedAt: "desc" }];
+    }
+  })();
+
   const [posts, total, groupedStatuses, brands] = await Promise.all([
     prisma.blogPost.findMany({
       where,
-      orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
+      orderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
@@ -173,6 +193,7 @@ export default async function AdminBlogPage({
     if (query) next.set("query", query);
     if (status) next.set("status", status);
     if (brandId) next.set("brand", brandId);
+    if (sort && sort !== "latest") next.set("sort", sort);
     next.set("page", String(targetPage));
     return `/af-ass-manage/blog?${next.toString()}`;
   };
@@ -230,13 +251,16 @@ export default async function AdminBlogPage({
         </div>
       </div>
 
-      <AdminBlogFilter
-        query={query}
-        status={status}
-        brandId={brandId}
-        brands={brands}
-        ALL={ALL}
-      />
+      <Suspense fallback={null}>
+        <AdminBlogFilter
+          query={query}
+          status={status}
+          brandId={brandId}
+          sort={sort}
+          brands={brands}
+          ALL={ALL}
+        />
+      </Suspense>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200">
         <table className="w-full min-w-[900px] text-left text-sm">
@@ -321,8 +345,14 @@ export default async function AdminBlogPage({
                   </p>
                 </td>
                 <td className="p-4">
-                  <div className="flex gap-3 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <span
+                      className={`flex items-center gap-1 ${
+                        sort === "views" || sort === "most_viewed"
+                          ? "font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/80"
+                          : ""
+                      }`}
+                    >
                       <Eye className="size-3.5" />
                       {post.viewCount}
                     </span>

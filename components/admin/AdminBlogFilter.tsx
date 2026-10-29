@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 
 import { BlogStatus } from "@/app/generated/prisma/enums";
@@ -18,6 +18,7 @@ type AdminBlogFilterProps = {
   query: string;
   status: string | undefined;
   brandId: string | undefined;
+  sort?: string;
   brands: { id: string; name: string }[];
   ALL: string;
 };
@@ -26,38 +27,45 @@ export default function AdminBlogFilter({
   query,
   status,
   brandId,
+  sort = "latest",
   brands,
   ALL,
 }: AdminBlogFilterProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formRef = useRef<HTMLFormElement>(null);
+
+  const updateFilters = (updates: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    Object.entries(updates).forEach(([key, val]) => {
+      if (!val || val === ALL || (key === "sort" && val === "latest")) {
+        params.delete(key);
+      } else {
+        params.set(key, val);
+      }
+    });
+
+    params.delete("page");
+    router.push(`/af-ass-manage/blog?${params.toString()}`);
+  };
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!formRef.current) return;
     
     const formData = new FormData(formRef.current);
-    const searchParams = new URLSearchParams();
-    
     const q = formData.get("query")?.toString().trim();
-    if (q) searchParams.set("query", q);
-    
-    const s = formData.get("status")?.toString();
-    if (s && s !== ALL) searchParams.set("status", s);
-    
-    const b = formData.get("brand")?.toString();
-    if (b && b !== ALL) searchParams.set("brand", b);
-    
-    router.push(`/af-ass-manage/blog?${searchParams.toString()}`);
+    updateFilters({ query: q });
   };
 
   return (
     <form 
       ref={formRef}
       onSubmit={handleSubmit}
-      className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_180px_200px]"
+      className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_160px_180px_160px]"
     >
-      <div className="relative">
+      <div className="relative sm:col-span-2 lg:col-span-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
         <Input
           name="query"
@@ -73,23 +81,12 @@ export default function AdminBlogFilter({
           onBlur={() => handleSubmit()}
         />
       </div>
+
       <Select 
         name="status" 
-        defaultValue={status ?? ALL}
+        value={status ?? ALL}
         onValueChange={(val) => {
-          // Instead of relying on the hidden input, we update the search parameter directly
-          const formData = new FormData(formRef.current!);
-          const searchParams = new URLSearchParams();
-          
-          const q = formData.get("query")?.toString().trim();
-          if (q) searchParams.set("query", q);
-          
-          if (val && val !== ALL) searchParams.set("status", val);
-          
-          const b = formData.get("brand")?.toString();
-          if (b && b !== ALL) searchParams.set("brand", b);
-          
-          router.push(`/af-ass-manage/blog?${searchParams.toString()}`);
+          updateFilters({ status: val });
         }}
       >
         <SelectTrigger className="h-10 w-full bg-white">
@@ -104,22 +101,12 @@ export default function AdminBlogFilter({
           ))}
         </SelectContent>
       </Select>
+
       <Select 
         name="brand" 
-        defaultValue={brandId ?? ALL}
+        value={brandId ?? ALL}
         onValueChange={(val) => {
-          const formData = new FormData(formRef.current!);
-          const searchParams = new URLSearchParams();
-          
-          const q = formData.get("query")?.toString().trim();
-          if (q) searchParams.set("query", q);
-          
-          const s = formData.get("status")?.toString();
-          if (s && s !== ALL) searchParams.set("status", s);
-          
-          if (val && val !== ALL) searchParams.set("brand", val);
-          
-          router.push(`/af-ass-manage/blog?${searchParams.toString()}`);
+          updateFilters({ brand: val });
         }}
       >
         <SelectTrigger className="h-10 w-full bg-white">
@@ -134,6 +121,25 @@ export default function AdminBlogFilter({
           ))}
         </SelectContent>
       </Select>
+
+      <Select 
+        name="sort" 
+        value={sort === "most_viewed" ? "views" : sort}
+        onValueChange={(val) => {
+          updateFilters({ sort: val });
+        }}
+      >
+        <SelectTrigger className="h-10 w-full bg-white">
+          <SelectValue placeholder="Sort: Latest" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="latest">Sort: Latest</SelectItem>
+          <SelectItem value="views">Most Viewed</SelectItem>
+          <SelectItem value="comments">Most Comments</SelectItem>
+          <SelectItem value="oldest">Oldest First</SelectItem>
+        </SelectContent>
+      </Select>
     </form>
   );
 }
+
