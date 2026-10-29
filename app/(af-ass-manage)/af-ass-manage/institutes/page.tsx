@@ -6,6 +6,7 @@ import InstituteFilters from "@/components/admin/AdminInstituteFilters"
 import InstitutePagination from "@/components/admin/AdminInstitutePagination"
 import AdminDeleteButton from "@/components/admin/AdminDeleteButton"
 import { deleteInstituteAction } from "./actions"
+import { ContactStatusBadge } from "@/components/admin/AdminInstituteContactControl"
 
 export default async function AdminInstitutesPage({
     searchParams
@@ -22,10 +23,11 @@ export default async function AdminInstitutesPage({
     const categoryId = typeof params.categoryId === 'string' ? params.categoryId : '';
     const subscriptionPlan = typeof params.subscriptionPlan === 'string' ? params.subscriptionPlan : '';
 
-    // 🆕 Params for sort, status, and ownership/approval
+    // 🆕 Params for sort, status, contact status, and ownership/approval
     const status = typeof params.status === 'string' ? params.status : 'all';
     const sortBy = typeof params.sortBy === 'string' ? params.sortBy : 'newest';
     const ownership = typeof params.ownership === 'string' ? params.ownership : 'all';
+    const contactStatus = typeof params.contactStatus === 'string' ? params.contactStatus : 'all';
 
     // 2. Dynamic Prisma Filters Build Karna
     const whereCondition: any = {};
@@ -40,6 +42,10 @@ export default async function AdminInstitutesPage({
         whereCondition.categories = {
             some: { categoryId: categoryId }
         };
+    }
+
+    if (contactStatus && contactStatus !== 'all') {
+        whereCondition.contactStatus = contactStatus;
     }
 
     // 🆕 Status Filtering Logic
@@ -226,6 +232,19 @@ export default async function AdminInstitutesPage({
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${institute.isPublished ? 'bg-stone-50 text-stone-700 border-stone-200 shadow-sm' : 'bg-stone-100 text-stone-500 border-stone-200'}`}>
                                                         {institute.isPublished ? 'Published' : 'Hidden'}
                                                     </span>
+                                                </div>
+
+                                                {/* Outreach Contact Status */}
+                                                <div className="flex flex-col gap-1 items-start">
+                                                    <ContactStatusBadge status={institute.contactStatus} />
+                                                    {institute.contactComment && (
+                                                        <span 
+                                                            title={institute.contactComment}
+                                                            className="text-[10px] text-stone-500 truncate max-w-[170px] italic"
+                                                        >
+                                                            "{institute.contactComment}"
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 <div className="mt-1">

@@ -49,6 +49,10 @@ export default async function AdminInstituteDashboard({ params }: { params: Prom
                 take: 1,
                 orderBy: { createdAt: 'desc' }
             },
+            contactNotes: {
+                orderBy: { createdAt: 'desc' },
+                take: 30
+            },
         }
     });
 

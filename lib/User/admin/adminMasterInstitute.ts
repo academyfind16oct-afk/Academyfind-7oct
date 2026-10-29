@@ -177,6 +177,10 @@ export async function updateInstituteByAdmin(
         const hasScholarship = formData.get("hasScholarship") === "true";
         const hasCertification = formData.get("hasCertification") === "true";
 
+        // Outreach & Contact Status
+        const contactStatus = (formData.get("contactStatus") as string) || undefined;
+        const contactComment = (formData.get("contactComment") as string) || undefined;
+
         const pros = JSON.parse((formData.get("pros") as string) || "[]");
         const cons = JSON.parse((formData.get("cons") as string) || "[]");
         const affiliations = JSON.parse((formData.get("affiliations") as string) || "[]");
@@ -234,10 +238,29 @@ export async function updateInstituteByAdmin(
                     hasOnlineClasses, hasHostelFacility, hasDemoClasses, hasScholarship, hasCertification,
                     pros, cons, affiliations, awards, mediumOfInstruction,
                     
+                    // Outreach
+                    ...(contactStatus !== undefined && { contactStatus }),
+                    ...(contactComment !== undefined && { 
+                        contactComment,
+                        contactedAt: new Date()
+                    }),
+
                     ...(newImageUrl && { imageUrl: newImageUrl }),
                     ...(newCoverUrl && { coverImage: newCoverUrl })
                 }
             });
+
+            // Outreach Note creation if comment provided
+            if (contactComment && contactComment.trim()) {
+                await tx.instituteContactNote.create({
+                    data: {
+                        instituteId,
+                        status: contactStatus || "NOT_CONTACTED",
+                        comment: contactComment.trim(),
+                        authorName: "Admin"
+                    }
+                });
+            }
 
             // 2. Manage Categories
             await tx.instituteCategory.deleteMany({ where: { instituteId: instituteId } });

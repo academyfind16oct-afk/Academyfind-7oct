@@ -15,7 +15,8 @@ import {
     Save, AlertTriangle, ArrowLeft, Image as ImageIcon, UploadCloud, Sparkles, 
     Search, Plus, X, Building2, Star, 
     ShieldAlert,
-    Eye
+    Eye,
+    PhoneCall
 } from "lucide-react";
 import Link from "next/link";
 
@@ -56,6 +57,9 @@ export default function MasterEditForm({ institute, allCities, allCategories, cu
     const [isFeatured, setIsFeatured] = useState(institute.isFeatured);
     const [plan, setPlan] = useState(institute.subscriptionPlan || "BASIC");
     const [planDuration, setPlanDuration] = useState("KEEP_EXISTING");
+
+    const [contactStatus, setContactStatus] = useState(institute.contactStatus || "NOT_CONTACTED");
+    const [contactComment, setContactComment] = useState(institute.contactComment || "");
 
     const [hasOnlineClasses, setHasOnlineClasses] = useState(institute.hasOnlineClasses ?? false);
     const [hasHostelFacility, setHasHostelFacility] = useState(institute.hasHostelFacility ?? false);
@@ -130,6 +134,8 @@ export default function MasterEditForm({ institute, allCities, allCategories, cu
         formData.set("hasDemoClasses", String(hasDemoClasses));
         formData.set("hasScholarship", String(hasScholarship));
         formData.set("hasCertification", String(hasCertification));
+        formData.set("contactStatus", contactStatus);
+        formData.set("contactComment", contactComment);
 
         formData.set("metaTitle", metaTitle);
         formData.set("metaDescription", metaDescription);
@@ -500,6 +506,49 @@ export default function MasterEditForm({ institute, allCities, allCategories, cu
                                 <div className="space-y-2 bg-white p-5 rounded-xl border border-stone-200">
                                     <Label>Brochure / Lead Magnet URL</Label>
                                     <Input name="brochureUrl" type="url" defaultValue={institute.brochureUrl || ""} placeholder="https://link-to-brochure.pdf" className="bg-stone-50" />
+                                </div>
+
+                                {/* 📞 6. OUTREACH & CONTACT STATUS */}
+                                <div className="p-5 bg-white rounded-xl border border-stone-200 space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 bg-amber-50 rounded-lg text-amber-700 border border-amber-200/60">
+                                            <PhoneCall className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <Label className="text-base font-bold text-stone-900">Institute Outreach & Contact Status</Label>
+                                            <p className="text-xs text-stone-500">Track client outreach status and record comments from administrative contact.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wide text-stone-600">Contact Status</Label>
+                                        <select 
+                                            value={contactStatus} 
+                                            onChange={(e) => setContactStatus(e.target.value)} 
+                                            className="flex h-10 w-full rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer font-medium"
+                                        >
+                                            <option value="NOT_CONTACTED">⚪ Not Contacted</option>
+                                            <option value="CONTACTED">🔵 Contacted</option>
+                                            <option value="CALL_BACK">🟣 Call Back</option>
+                                            <option value="FOLLOW_UP">🟠 Follow Up</option>
+                                            <option value="INTERESTED">🟢 Interested</option>
+                                            <option value="NOT_INTERESTED">🔴 Not Interested</option>
+                                            <option value="ONBOARDED">⭐ Onboarded</option>
+                                            <option value="DNP">🟡 DNP (No Answer)</option>
+                                            <option value="JUNK">❌ Junk / Invalid</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wide text-stone-600">Contact Comment / Discussion Notes</Label>
+                                        <Textarea 
+                                            value={contactComment} 
+                                            onChange={(e) => setContactComment(e.target.value)} 
+                                            rows={3}
+                                            placeholder="Add notes about discussion with institute owner/staff..."
+                                            className="bg-stone-50"
+                                        />
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

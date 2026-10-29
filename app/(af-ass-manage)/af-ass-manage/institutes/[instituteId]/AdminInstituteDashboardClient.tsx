@@ -24,6 +24,7 @@ import EditAchievements from "@/app/(public)/manager/[instituteId]/profile/edit/
 import EditNotablePersons from "@/app/(public)/manager/[instituteId]/profile/edit/EditNotablePersons";
 import EditFacultyMembers from "@/app/(public)/manager/[instituteId]/profile/edit/EditFacultyMembers";
 import { DemographicsCharts } from "@/components/manager/AnalyticsCharts";
+import AdminInstituteContactControl, { ContactStatusBadge } from "@/components/admin/AdminInstituteContactControl";
 
 export function AdminInstituteDashboardClient({ institute, analyticsData }: { institute: any, analyticsData?: any }) {
 
@@ -95,7 +96,20 @@ export function AdminInstituteDashboardClient({ institute, analyticsData }: { in
                         Last Enquiry — Admin: {institute.enquiries[0].status || 'NEW'} | Student: {institute.enquiries[0].userContactStatus || 'NEW'}
                     </Badge>
                 )}
+                <ContactStatusBadge status={institute.contactStatus} />
             </div>
+
+            {/* 📞 OUTREACH & CONTACT STATUS CONTROL */}
+            <AdminInstituteContactControl
+                instituteId={institute.id}
+                instituteName={institute.name}
+                phone={institute.phone}
+                initialStatus={institute.contactStatus}
+                initialComment={institute.contactComment}
+                initialContactedAt={institute.contactedAt}
+                initialLastContactedBy={institute.lastContactedBy}
+                contactNotes={institute.contactNotes || []}
+            />
 
             {/* TAB SYSTEM */}
             <Tabs defaultValue="overview" className="w-full">

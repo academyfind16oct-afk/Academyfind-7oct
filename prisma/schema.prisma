@@ -453,12 +453,19 @@ model Institute {
   studentRecords StudentInstituteRecord[]
   teacherRecords TeacherInstituteRecord[]
 
+  contactStatus       String                     @default("NOT_CONTACTED")
+  contactComment      String?                    @db.Text
+  contactedAt         DateTime?
+  lastContactedBy     String?
+  contactNotes        InstituteContactNote[]
+
   conversations Conversation[]
   communicationTemplates InstituteCommunicationTemplate[]
   notices       InstituteNotice[]
 
   @@index([cityId])
   @@index([slug])
+  @@index([contactStatus])
 }
 
 model City {
@@ -1759,6 +1766,20 @@ model InstituteFacultyMember {
 
   @@index([instituteId])
   @@map("institute_faculty_member")
+}
+
+model InstituteContactNote {
+  id          String    @id @default(cuid())
+  instituteId String
+  status      String?
+  comment     String    @db.Text
+  authorName  String?
+  createdAt   DateTime  @default(now())
+  institute   Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+
+  @@index([instituteId])
+  @@index([createdAt])
+  @@map("institute_contact_note")
 }
 
 model InstituteComparisonCache {
