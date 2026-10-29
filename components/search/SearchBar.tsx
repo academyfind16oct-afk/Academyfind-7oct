@@ -579,7 +579,7 @@ export function SearchBar() {
                 handleSearch();
               }
             }}
-            placeholder="What? (e.g. JEE Coaching, Aakash)"
+            placeholder="What? (e.g. JEE Coaching, Dance Classes)"
             className="
               min-w-0
               flex-1
