@@ -1,12 +1,12 @@
-import { PremiumLock } from "@/components/manager/PremiumLock";
 import { ManagerSidebarWrapper } from "@/components/manager/ManagerSidebarWrapper";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
-import { ArrowLeft, ArrowRight, BarChart2, BarChart3, Bell, CreditCard, LayoutDashboardIcon, MessageSquare, User, UserRound, Users, PackageOpen, MessageCircle, FileText, Zap, Building2, Sparkles, UserCheck, GraduationCap, KeyRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart2, BarChart3, Bell, CreditCard, LayoutDashboardIcon, MessageSquare, UserRound, Users, PackageOpen, MessageCircle, FileText, Zap, Building2, Sparkles, UserCheck, GraduationCap, KeyRound } from "lucide-react";
 import { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { ManagerSidebarLink } from "@/components/manager/ManagerSidebarLink";
+import { SubscriptionExpiryBanner } from "@/components/manager/SubscriptionExpiryBanner";
 
 export const metadata: Metadata = {
     title: "Manager Control Panel | AcademyFind",
@@ -20,7 +20,7 @@ export default async function ManagerDashBoardLayout({
     children, params
 }: {
     children: React.ReactNode;
-    params: any;
+    params: Promise<{ instituteId: string }>;
 }) {
     const { instituteId } = await params;
     const session = await auth.api.getSession({
@@ -127,20 +127,20 @@ export default async function ManagerDashBoardLayout({
     ]);
 
     // Automatic Expiry Notification Check
-    if (plan !== "BASIC" && institute.planExpiresAt) {
+    if (institute.planExpiresAt) {
         const expiresAt = new Date(institute.planExpiresAt);
         const now = new Date();
         const daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-        // If plan expires in 7 days or less, and it hasn't expired yet
-        if (daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
-            // Check if we already notified them recently (within the last 7 days)
+        // State A: If plan expires in 7 days or less, and it hasn't expired yet
+        if (plan !== "BASIC" && daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             const existingNotification = await prisma.userNotification.findFirst({
                 where: {
                     userId: session.user.id,
                     entityId: instituteId,
                     type: "SYSTEM",
+                    title: "Plan Expiring Soon",
                     createdAt: { gte: sevenDaysAgo }
                 }
             });
@@ -152,7 +152,32 @@ export default async function ManagerDashBoardLayout({
                         entityId: instituteId,
                         type: "SYSTEM",
                         title: "Plan Expiring Soon",
-                        body: `Your ${plan} plan for ${institute.name} expires in ${daysUntilExpiry} days. Please renew to keep your premium features active!`,
+                        body: `Your ${plan} plan for ${institute.name} expires in ${daysUntilExpiry === 0 ? "today" : `${daysUntilExpiry} days`}. Please renew to keep your premium features active!`,
+                        isRead: false
+                    }
+                });
+            }
+        } else if (daysUntilExpiry < 0) {
+            // State B: Plan has expired - notify if not notified about expiry in the last 30 days
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const existingExpiryNotification = await prisma.userNotification.findFirst({
+                where: {
+                    userId: session.user.id,
+                    entityId: instituteId,
+                    type: "SYSTEM",
+                    title: "Subscription Expired",
+                    createdAt: { gte: thirtyDaysAgo }
+                }
+            });
+
+            if (!existingExpiryNotification) {
+                await prisma.userNotification.create({
+                    data: {
+                        userId: session.user.id,
+                        entityId: instituteId,
+                        type: "SYSTEM",
+                        title: "Subscription Expired",
+                        body: `Your premium subscription for ${institute.name} has expired. Your institute has been moved to the Basic plan. Renew now to restore student leads & premium rankings.`,
                         isRead: false
                     }
                 });
@@ -322,6 +347,12 @@ export default async function ManagerDashBoardLayout({
 
                 {/* --- MAIN CONTENT AREA --- */}
                 <main className="flex-1 bg-white/70 backdrop-blur-xl rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 lg:p-10 min-h-[calc(100vh-4rem)]">
+                    <SubscriptionExpiryBanner
+                        instituteId={instituteId}
+                        instituteName={institute.name}
+                        plan={plan}
+                        planExpiresAt={institute.planExpiresAt}
+                    />
                     {children}
                 </main>
 
