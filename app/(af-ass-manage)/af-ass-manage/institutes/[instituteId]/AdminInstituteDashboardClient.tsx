@@ -22,6 +22,7 @@ import ClassroomImages from "@/app/(public)/manager/[instituteId]/profile/edit/E
 import EditFAQs from "@/app/(public)/manager/[instituteId]/profile/edit/EditFAQS";
 import EditAchievements from "@/app/(public)/manager/[instituteId]/profile/edit/EditAchievements";
 import EditNotablePersons from "@/app/(public)/manager/[instituteId]/profile/edit/EditNotablePersons";
+import EditFacultyMembers from "@/app/(public)/manager/[instituteId]/profile/edit/EditFacultyMembers";
 import { DemographicsCharts } from "@/components/manager/AnalyticsCharts";
 
 export function AdminInstituteDashboardClient({ institute, analyticsData }: { institute: any, analyticsData?: any }) {
@@ -434,6 +435,7 @@ export function AdminInstituteDashboardClient({ institute, analyticsData }: { in
                         <EditFAQs instituteId={institute.id} currentFAQs={institute.faqs || []} maxLimit={999} />
                         <EditAchievements instituteId={institute.id} currentAchievements={institute.achievements || []} maxLimit={999} />
                         <EditNotablePersons instituteId={institute.id} currentPersons={institute.notablepersons || []} maxLimit={999} />
+                        <EditFacultyMembers instituteId={institute.id} currentFaculty={institute.facultyMembers || []} maxLimit={999} />
                     </div>
                 </TabsContent>
             </Tabs>

@@ -15,10 +15,25 @@ export async function GET(
             return NextResponse.json({ error: "Missing instituteId" }, { status: 400 });
         }
 
-        let members: any[] = [];
+        interface MemberItem {
+            id: string;
+            courseName?: string | null;
+            designation?: string | null;
+            experience?: string | null;
+            subjects?: string[] | string | null;
+            user?: {
+                id: string;
+                name: string | null;
+                username: string | null;
+                image: string | null;
+                allowDms: boolean;
+            } | null;
+        }
+
+        let members: MemberItem[] = [];
 
         if (type === "STUDENT") {
-            members = await prisma.studentInstituteRecord.findMany({
+            const studentRecords = await prisma.studentInstituteRecord.findMany({
                 where: {
                     instituteId,
                     isVerified: true,
@@ -44,45 +59,79 @@ export async function GET(
                     }
                 }
             });
-            members = members.map((m: any) => ({
+            members = studentRecords.map((m) => ({
                 id: m.id,
                 courseName: m.courseName,
                 user: m.studentProfile?.user
             }));
         } else if (type === "TEACHER") {
-            members = await prisma.teacherInstituteRecord.findMany({
-                where: {
-                    instituteId,
-                    isVerified: true,
-                    isVisible: true,
-                    membership: { status: "ACTIVE" },
-                    teacherProfile: {
-                        user: {
-                            name: { contains: q, mode: "insensitive" }
-                        }
-                    }
-                },
-                take: 20,
-                orderBy: [{ isFeatured: "desc" }, { displayOrder: "asc" }],
-                select: {
-                    id: true,
-                    designation: true,
-                    teacherProfile: {
-                        select: {
-                            user: {
-                                select: { id: true, name: true, username: true, image: true, allowDms: true }
+            const [regTeachers, customFaculty] = await Promise.all([
+                prisma.teacherInstituteRecord.findMany({
+                    where: {
+                        instituteId,
+                        isVerified: true,
+                        isVisible: true,
+                        membership: { status: "ACTIVE" },
+                        ...(q ? {
+                            teacherProfile: {
+                                user: {
+                                    name: { contains: q, mode: "insensitive" }
+                                }
+                            }
+                        } : {})
+                    },
+                    take: 20,
+                    orderBy: [{ isFeatured: "desc" }, { displayOrder: "asc" }],
+                    select: {
+                        id: true,
+                        designation: true,
+                        teacherProfile: {
+                            select: {
+                                user: {
+                                    select: { id: true, name: true, username: true, image: true, allowDms: true }
+                                }
                             }
                         }
                     }
-                }
-            });
-            members = members.map((m: any) => ({
+                }),
+                prisma.instituteFacultyMember.findMany({
+                    where: {
+                        instituteId,
+                        ...(q ? {
+                            OR: [
+                                { name: { contains: q, mode: "insensitive" } },
+                                { designation: { contains: q, mode: "insensitive" } },
+                            ]
+                        } : {})
+                    },
+                    take: 20,
+                    orderBy: { displayOrder: "asc" },
+                })
+            ]);
+
+            const mappedReg: MemberItem[] = regTeachers.map((m) => ({
                 id: m.id,
                 designation: m.designation,
                 user: m.teacherProfile?.user
             }));
+
+            const mappedCustom: MemberItem[] = customFaculty.map((f) => ({
+                id: f.id,
+                designation: f.designation || "Faculty",
+                experience: f.experience,
+                subjects: f.subjects,
+                user: {
+                    id: f.id,
+                    name: f.name,
+                    username: null,
+                    image: f.imageUrl,
+                    allowDms: false,
+                }
+            }));
+
+            members = [...mappedReg, ...mappedCustom];
         } else if (type === "MANAGER") {
-            members = await prisma.instituteManager.findMany({
+            const managerRecords = await prisma.instituteManager.findMany({
                 where: {
                     instituteId,
                     user: {
@@ -97,7 +146,7 @@ export async function GET(
                     }
                 }
             });
-            members = members.map((m: any) => ({
+            members = managerRecords.map((m) => ({
                 id: m.user.id,
                 user: m.user
             }));

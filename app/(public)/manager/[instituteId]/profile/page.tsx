@@ -34,6 +34,9 @@ export default async function ManagerProfilePage({
             batches: true,
             achievements: true,
             notablepersons: true,
+            facultyMembers: {
+                orderBy: { displayOrder: "asc" }
+            },
             operatingHours: true
         }
     });

@@ -244,3 +244,65 @@ export async function updateNotablePersons(instituteId: string, formData: FormDa
         return { success: false, error: error.message || "Failed to update alumni in DB" };
     }
 }
+
+// ==========================================
+// 6. UPDATE FACULTY MEMBERS (Direct Entries with Images)
+// ==========================================
+export async function updateFacultyMembers(instituteId: string, formData: FormData) {
+    try {
+        const rawData = formData.get("data") as string;
+        const members = JSON.parse(rawData || "[]");
+
+        // 1. Upload files first
+        const processedMembers = await Promise.all(
+            members.map(async (m: any, i: number) => {
+                let secureUrl = m.imageUrl;
+                const file = formData.get(`image_${i}`) as File | null;
+                
+                if (file && file.size > 0) {
+                    secureUrl = await uploadImageToCloudinary(file, "faculty", `fac-${instituteId}`);
+                }
+                
+                const subjects = Array.isArray(m.subjects) 
+                    ? m.subjects 
+                    : (m.subjects ? String(m.subjects).split(",").map((s: string) => s.trim()).filter(Boolean) : []);
+
+                return {
+                    instituteId,
+                    name: String(m.name || "").trim(),
+                    designation: m.designation?.trim() || null,
+                    description: m.description?.trim() || null,
+                    experience: m.experience?.trim() || null,
+                    subjects,
+                    displayOrder: i,
+                    imageUrl: secureUrl || null
+                };
+            })
+        );
+
+        // 2. Transact DB Update
+        await prisma.$transaction(async (tx) => {
+            await tx.instituteFacultyMember.deleteMany({ where: { instituteId } });
+            
+            if (processedMembers.length > 0) {
+                await tx.instituteFacultyMember.createMany({
+                    data: processedMembers
+                });
+            }
+        });
+
+        // 3. Revalidate paths
+        revalidatePath(`/manager/${instituteId}/profile`);
+        revalidatePath(`/af-ass-manage/institutes/${instituteId}`);
+        const inst = await prisma.institute.findUnique({ where: { id: instituteId }, select: { slug: true } });
+        if (inst?.slug) {
+            revalidatePath(`/institute/${inst.slug}`);
+            revalidatePath(`/institute/${instituteId}`);
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Faculty Members Error:", error);
+        return { success: false, error: error.message || "Failed to update faculty members in DB" };
+    }
+}

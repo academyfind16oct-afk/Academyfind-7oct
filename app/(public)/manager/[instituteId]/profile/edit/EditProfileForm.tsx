@@ -728,6 +728,22 @@ export default function EditProfileForm({
                             ) : (
                                 <LockedFeatureCard icon={<GraduationCap className="w-4 h-4 text-blue-500" />} title="Notable Alumni" desc="Showcase your most successful alumni and their current placements." instituteId={institute.id} />
                             )}
+
+                            {/* Faculty Management Link Notice */}
+                            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-800 shrink-0">
+                                        <GraduationCap className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-stone-900">Manage Faculty & Teachers</p>
+                                        <p className="text-stone-500 text-[11px] mt-0.5">Faculty management (both direct showcase and registered accounts) has moved to the <strong>Members</strong> tab.</p>
+                                    </div>
+                                </div>
+                                <Link href={`/manager/${institute.id}/members`} className="inline-flex items-center gap-1 font-bold text-amber-800 hover:text-amber-950 shrink-0 text-xs px-3 py-1.5 rounded-xl bg-amber-100/70 border border-amber-200">
+                                    Go to Members Tab →
+                                </Link>
+                            </div>
                         </div>
                     </TabsContent>
                 </Tabs>

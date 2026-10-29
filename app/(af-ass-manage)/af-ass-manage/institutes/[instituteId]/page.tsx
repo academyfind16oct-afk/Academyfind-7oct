@@ -41,6 +41,9 @@ export default async function AdminInstituteDashboard({ params }: { params: Prom
             faqs: true,
             achievements: true,
             notablepersons: true,
+            facultyMembers: {
+                orderBy: { displayOrder: "asc" }
+            },
             enquiries: {
                 where: { isForwarded: false },
                 take: 1,

@@ -796,11 +796,14 @@ export default async function InstitutePage({ params }: PageProps) {
                 {!isAlreadyClaimed && (
                   <div className="mt-5 p-5 bg-amber-50 border border-amber-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-2">
-                      <p className="text-amber-900 font-bold flex items-center gap-1.5 text-sm md:text-base">
+                      <p className="text-amber-900 font-bold flex items-center gap-1.5 text-sm md:text-base flex-wrap">
                         <CheckCircle className="w-4 h-4 text-amber-500" /> Are you the owner or representative?
+                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                          100% Free
+                        </span>
                       </p>
                       <p className="text-amber-700 text-xs md:text-sm leading-relaxed">
-                        Don't miss out on student leads! Claim your profile now to manage enquiries, update details, and get real-time insights on who visits or saves your page.
+                        Don't miss out on student leads! Claim your profile now for free to manage enquiries, update details, and get real-time insights on who visits or saves your page.
                       </p>
                       {false && <div className="inline-flex bg-amber-200/50 text-amber-900 px-3 py-1 rounded-md text-xs font-bold items-center gap-1.5 mt-1 border border-amber-200">
                         🎉 Early Bird Offer: Free/Discounted pricing valid only till 15th August!
@@ -809,8 +812,8 @@ export default async function InstitutePage({ params }: PageProps) {
 
                     <div className="shrink-0 w-full sm:w-auto flex flex-col gap-3">
                       <Link href={`/institute/${institute.id}-${institute.slug}/claim`} className="w-full">
-                        <Button className="bg-amber-600 hover:bg-amber-700 text-white transition-colors px-6 font-bold w-full rounded-xl cursor-pointer">
-                          Claim Profile
+                        <Button className="bg-amber-600 hover:bg-amber-700 text-white transition-all px-6 py-2.5 font-bold w-full rounded-xl cursor-pointer shadow-xs hover:shadow-md">
+                          Claim Profile for Free
                         </Button>
                       </Link>
                       <p className="text-center text-[11px] text-amber-700/80 font-medium">
@@ -1085,7 +1088,7 @@ export default async function InstitutePage({ params }: PageProps) {
               <span className="text-slate-300">•</span>
               <div className="flex items-center gap-1.5 px-2.5 py-1 text-slate-600 font-semibold">
                 <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>{totalTeachers} Faculty</span>
+                <span>{totalTeachers + (institute.facultyMembers?.length || 0)} Faculty</span>
               </div>
               {instituteManagers.length > 0 && (
                 <>
@@ -1105,7 +1108,7 @@ export default async function InstitutePage({ params }: PageProps) {
                 title="Community" 
                 instituteId={institute.id} 
                 isLoggedIn={!!userId}
-                description={`Unlock with 1 AFC Coin to access full student, faculty & manager profiles, contact details, and direct messaging (${totalStudents + totalTeachers + instituteManagers.length} Members).`} 
+                description={`Unlock with 1 AFC Coin to access full student, faculty & manager profiles, contact details, and direct messaging (${totalStudents + totalTeachers + (institute.facultyMembers?.length || 0) + instituteManagers.length} Members).`} 
               />
 
               <div className="pointer-events-none select-none blur-[1px] opacity-75">
@@ -1158,11 +1161,11 @@ export default async function InstitutePage({ params }: PageProps) {
                         <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><UserCheck className="w-4 h-4" /></div>
                         <h3 className="text-lg font-bold text-slate-800">Faculty & Teachers</h3>
                         <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-emerald-100">
-                          {totalTeachers} Profiles
+                          {totalTeachers + (institute.facultyMembers?.length || 0)} Profiles
                         </span>
                       </div>
                     </div>
-                    {featuredFaculty.length > 0 ? (
+                    {(featuredFaculty.length > 0 || (institute.facultyMembers && institute.facultyMembers.length > 0)) ? (
                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {featuredFaculty.slice(0, 3).map((teacher: any) => {
                           const u = teacher.teacherProfile.user;
@@ -1178,6 +1181,17 @@ export default async function InstitutePage({ params }: PageProps) {
                             </div>
                           )
                         })}
+                        {institute.facultyMembers?.slice(0, Math.max(0, 3 - featuredFaculty.length)).map((faculty: any) => (
+                          <div key={faculty.id} className="rounded-2xl border border-slate-200 bg-white p-4 flex gap-4 items-center">
+                            <div className="w-12 h-12 rounded-full border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
+                              {faculty.imageUrl ? <Image src={faculty.imageUrl} alt={faculty.name} width={48} height={48} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2.5 text-slate-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-slate-900 text-sm truncate">{faculty.name}</h4>
+                              <p className="text-xs text-slate-500 truncate">{faculty.designation || faculty.experience || "Faculty"}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 flex items-center gap-3">
@@ -1252,61 +1266,97 @@ export default async function InstitutePage({ params }: PageProps) {
               </div>
 
               {/* TEACHERS / FACULTY */}
-              {institute.providerType !== 'INDIVIDUAL' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><UserCheck className="w-4 h-4" /></div>
-                      <h3 className="text-xl font-bold text-slate-800">Faculty & Teachers</h3>
-                      <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-emerald-100">
-                        {totalTeachers} {totalTeachers === 1 ? "Teacher" : "Teachers"}
-                      </span>
-                    </div>
-                    {totalTeachers > 3 && (
-                      <MemberDrawer title="Faculty" total={totalTeachers} type="TEACHER" instituteId={institute.id} />
-                    )}
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><UserCheck className="w-4 h-4" /></div>
+                    <h3 className="text-xl font-bold text-slate-800">Faculty & Teachers</h3>
+                    <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-emerald-100">
+                      {totalTeachers + (institute.facultyMembers?.length || 0)} {(totalTeachers + (institute.facultyMembers?.length || 0)) === 1 ? "Teacher" : "Teachers"}
+                    </span>
                   </div>
-
-                  {featuredFaculty.length > 0 ? (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {featuredFaculty.slice(0, 3).map((teacher: any) => {
-                        const u = teacher.teacherProfile.user;
-                        const canMessage = userId && userId !== u.id && u.allowDms && u.chatSettings?.allowDirectMessages;
-                        return (
-                          <div key={teacher.id} className="rounded-2xl border border-slate-200 bg-white p-4 flex gap-4 items-center">
-                            <div className="w-12 h-12 rounded-full border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
-                              {u.image ? <Image src={u.image} alt={u.name} width={48} height={48} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2.5 text-slate-400" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-slate-900 text-sm truncate">{u.name}</h4>
-                              <p className="text-xs text-slate-500 truncate">{teacher.designation}</p>
-                              <div className="flex gap-2 mt-1">
-                                <span className="text-[10px] font-bold text-blue-600 flex items-center gap-0.5"><CheckCircle className="w-3 h-3" /> Verified</span>
-                                {teacher.isFeatured && <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5"><Star className="w-3 h-3 fill-amber-500" /> Featured</span>}
-                              </div>
-                              {teacher.teachingSubjects && <p className="text-[10px] font-semibold text-emerald-600 mt-2 truncate">Subjects: {teacher.teachingSubjects}</p>}
-                            </div>
-                            <div className="flex flex-col gap-2 shrink-0">
-                              <Link href={`/u/${u.username}`} className="text-xs text-blue-600 hover:underline">Profile</Link>
-                              {canMessage && <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-[10px] bg-amber-50 text-amber-700 hover:bg-amber-100"><Link href={`/chat?userId=${u.id}`}>Message →</Link></Button>}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-100">
-                        <UserCheck className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-slate-800 text-xs sm:text-sm">Faculty Directory (0 Listed)</h4>
-                        <p className="text-[11px] sm:text-xs text-slate-500">Teachers and subject faculty of this institute will be featured here.</p>
-                      </div>
-                    </div>
+                  {(totalTeachers + (institute.facultyMembers?.length || 0)) > 3 && (
+                    <MemberDrawer title="Faculty" total={totalTeachers + (institute.facultyMembers?.length || 0)} type="TEACHER" instituteId={institute.id} />
                   )}
                 </div>
-              )}
+
+                {(featuredFaculty.length > 0 || (institute.facultyMembers && institute.facultyMembers.length > 0)) ? (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {featuredFaculty.map((teacher: any) => {
+                      const u = teacher.teacherProfile.user;
+                      const canMessage = userId && userId !== u.id && u.allowDms && u.chatSettings?.allowDirectMessages;
+                      return (
+                        <div key={teacher.id} className="rounded-2xl border border-slate-200 bg-white p-4 flex gap-4 items-center">
+                          <div className="w-12 h-12 rounded-full border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
+                            {u.image ? <Image src={u.image} alt={u.name} width={48} height={48} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2.5 text-slate-400" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-slate-900 text-sm truncate">{u.name}</h4>
+                            <p className="text-xs text-slate-500 truncate">{teacher.designation}</p>
+                            <div className="flex gap-2 mt-1">
+                              <span className="text-[10px] font-bold text-blue-600 flex items-center gap-0.5"><CheckCircle className="w-3 h-3" /> Verified</span>
+                              {teacher.isFeatured && <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5"><Star className="w-3 h-3 fill-amber-500" /> Featured</span>}
+                            </div>
+                            {teacher.teachingSubjects && <p className="text-[10px] font-semibold text-emerald-600 mt-2 truncate">Subjects: {teacher.teachingSubjects}</p>}
+                          </div>
+                          <div className="flex flex-col gap-2 shrink-0">
+                            <Link href={`/u/${u.username}`} className="text-xs text-blue-600 hover:underline">Profile</Link>
+                            {canMessage && <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-[10px] bg-amber-50 text-amber-700 hover:bg-amber-100"><Link href={`/chat?userId=${u.id}`}>Message →</Link></Button>}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {institute.facultyMembers?.map((faculty) => (
+                      <div key={faculty.id} className="rounded-2xl border border-slate-200 bg-white p-4 flex gap-4 items-start hover:border-amber-200 transition-all">
+                        <div className="w-12 h-12 rounded-full border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
+                          {faculty.imageUrl ? (
+                            <Image src={faculty.imageUrl} alt={faculty.name} width={48} height={48} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-full h-full p-2.5 text-slate-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-bold text-slate-900 text-sm truncate">{faculty.name}</h4>
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60 shrink-0">
+                              Faculty
+                            </span>
+                          </div>
+                          {faculty.designation && <p className="text-xs text-slate-500 truncate mt-0.5">{faculty.designation}</p>}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            {faculty.experience && (
+                              <span className="text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded">
+                                {faculty.experience}
+                              </span>
+                            )}
+                            {faculty.subjects && (
+                              <span className="text-[10px] font-semibold text-emerald-700 truncate">
+                                {Array.isArray(faculty.subjects) ? faculty.subjects.join(", ") : faculty.subjects}
+                              </span>
+                            )}
+                          </div>
+                          {faculty.description && (
+                            <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
+                              {faculty.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-100">
+                      <UserCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-800 text-xs sm:text-sm">Faculty Directory (0 Listed)</h4>
+                      <p className="text-[11px] sm:text-xs text-slate-500">Teachers and subject faculty of this institute will be featured here.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* MANAGERS */}
               {instituteManagers.length > 0 && (

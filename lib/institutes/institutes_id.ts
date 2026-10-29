@@ -6,6 +6,7 @@ const instituteInclude = {
   facilities: true,
   faqs: true,
   notablepersons: true,
+  facultyMembers: { orderBy: { displayOrder: "asc" as const } },
   achievements: true,
   operatingHours: { orderBy: { dayOfWeek: "asc" as const } },
   categories: {

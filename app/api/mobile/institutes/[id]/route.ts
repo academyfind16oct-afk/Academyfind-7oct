@@ -26,6 +26,7 @@ export async function GET(
         highlightStats: { orderBy: { order: 'asc' } },
         achievements: { orderBy: { year: 'desc' }, take: 10 },
         faqs: { orderBy: { order: 'asc' } },
+        facultyMembers: { orderBy: { displayOrder: 'asc' } },
         operatingHours: { orderBy: { dayOfWeek: 'asc' } },
         reviews: {
           where: { status: 'APPROVED' },

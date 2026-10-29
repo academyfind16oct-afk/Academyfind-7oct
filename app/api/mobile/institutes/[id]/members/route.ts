@@ -21,9 +21,11 @@ export async function GET(
     const [
       students,
       teachers,
+      customFaculty,
       managers,
       totalStudents,
       totalTeachers,
+      totalCustomFaculty,
       flatMembers,
     ] = await Promise.all([
       prisma.studentInstituteRecord.findMany({
@@ -89,6 +91,12 @@ export async function GET(
         },
       }),
 
+      prisma.instituteFacultyMember.findMany({
+        where: { instituteId },
+        orderBy: { displayOrder: 'asc' },
+        take: 30,
+      }),
+
       prisma.instituteManager.findMany({
         where: {
           instituteId,
@@ -124,6 +132,10 @@ export async function GET(
         },
       }),
 
+      prisma.instituteFacultyMember.count({
+        where: { instituteId },
+      }),
+
       // Flat legacy membership support
       prisma.instituteMembership.findMany({
         where: {
@@ -151,17 +163,37 @@ export async function GET(
       user: s.studentProfile.user,
     }));
 
-    const formattedTeachers = teachers.map((t) => ({
-      id: t.id,
-      role: 'TEACHER',
-      designation: t.designation,
-      department: t.department,
-      teachingSubjects: t.teachingSubjects,
-      isFeatured: t.isFeatured,
-      isVerified: t.isVerified,
-      bio: t.bio,
-      user: t.teacherProfile.user,
-    }));
+    const formattedTeachers = [
+      ...teachers.map((t) => ({
+        id: t.id,
+        role: 'TEACHER',
+        designation: t.designation,
+        department: t.department,
+        teachingSubjects: t.teachingSubjects,
+        isFeatured: t.isFeatured,
+        isVerified: t.isVerified,
+        bio: t.bio,
+        user: t.teacherProfile.user,
+      })),
+      ...customFaculty.map((f) => ({
+        id: f.id,
+        role: 'TEACHER',
+        designation: f.designation || 'Faculty',
+        department: null,
+        teachingSubjects: Array.isArray(f.subjects) ? f.subjects : f.subjects ? [f.subjects] : [],
+        isFeatured: false,
+        isVerified: true,
+        bio: f.description,
+        experience: f.experience,
+        user: {
+          id: f.id,
+          name: f.name,
+          username: null,
+          image: f.imageUrl,
+          allowDms: false,
+        },
+      })),
+    ];
 
     const formattedManagers = managers.map((m) => ({
       id: `${m.userId}-${m.instituteId}`,
@@ -171,9 +203,9 @@ export async function GET(
     }));
 
     const counts = {
-      total: totalStudents + totalTeachers + managers.length,
+      total: totalStudents + totalTeachers + totalCustomFaculty + managers.length,
       students: totalStudents,
-      teachers: totalTeachers,
+      teachers: totalTeachers + totalCustomFaculty,
       managers: managers.length,
     };
 

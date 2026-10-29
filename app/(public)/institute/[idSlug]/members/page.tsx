@@ -8,7 +8,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import extractId from "@/lib/extractId";
 import { prisma } from "@/lib/prisma";
 
-type Props = { params: Promise<{ idSlug: string }> };
+type Props = { 
+  params: Promise<{ idSlug: string }>;
+  searchParams?: Promise<{ tab?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { idSlug } = await params;
@@ -24,8 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function MembersDirectoryPage({ params }: Props) {
+export default async function MembersDirectoryPage({ params, searchParams }: Props) {
   const { idSlug } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const id = extractId(idSlug);
 
   const institute = await prisma.institute.findFirst({
@@ -34,7 +38,7 @@ export default async function MembersDirectoryPage({ params }: Props) {
   });
   if (!institute) notFound();
 
-  const [students, teachers, managers] = await Promise.all([
+  const [students, teachers, customFaculty, managers] = await Promise.all([
     prisma.studentInstituteRecord.findMany({
       where: {
         instituteId: institute.id,
@@ -70,7 +74,7 @@ export default async function MembersDirectoryPage({ params }: Props) {
     }),
     prisma.teacherInstituteRecord.findMany({
       where: {
-        instituteId: id,
+        instituteId: institute.id,
         isVerified: true,
         isVisible: true,
         membership: { status: "ACTIVE" },
@@ -99,8 +103,13 @@ export default async function MembersDirectoryPage({ params }: Props) {
         },
       },
     }),
+    prisma.instituteFacultyMember.findMany({
+      where: { instituteId: institute.id },
+      orderBy: { displayOrder: "asc" },
+      take: 48,
+    }),
     prisma.instituteManager.findMany({
-      where: { instituteId: id },
+      where: { instituteId: institute.id },
       select: {
         user: {
           select: {
@@ -114,6 +123,13 @@ export default async function MembersDirectoryPage({ params }: Props) {
       },
     }),
   ]);
+
+  const totalFaculty = teachers.length + customFaculty.length;
+  const activeTab = resolvedSearchParams.tab && ["students", "teachers", "managers"].includes(resolvedSearchParams.tab)
+    ? resolvedSearchParams.tab
+    : (students.length === 0 && totalFaculty > 0)
+      ? "teachers"
+      : "students";
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10">
@@ -130,14 +146,14 @@ export default async function MembersDirectoryPage({ params }: Props) {
           {institute.name} — Member Directory
         </h1>
         <p className="mt-1 text-slate-500">
-          Verified members of this institute
+          Verified members and faculty of this institute
         </p>
       </div>
 
-      <Tabs defaultValue="students" className="w-full">
+      <Tabs defaultValue={activeTab} className="w-full">
         <TabsList className="mb-8 w-full max-w-md grid grid-cols-3 bg-slate-100 p-1 rounded-xl">
           <TabsTrigger value="students" className="rounded-lg">Students ({students.length})</TabsTrigger>
-          <TabsTrigger value="teachers" className="rounded-lg">Faculty ({teachers.length})</TabsTrigger>
+          <TabsTrigger value="teachers" className="rounded-lg">Faculty ({totalFaculty})</TabsTrigger>
           <TabsTrigger value="managers" className="rounded-lg">Managers ({managers.length})</TabsTrigger>
         </TabsList>
 
@@ -146,7 +162,7 @@ export default async function MembersDirectoryPage({ params }: Props) {
             <EmptyState text="No verified students yet." />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {students.map((record: any) => {
+              {students.map((record) => {
                 const user = record.studentProfile?.user;
                 if (!user) return null;
                 return (
@@ -170,11 +186,11 @@ export default async function MembersDirectoryPage({ params }: Props) {
         </TabsContent>
 
         <TabsContent value="teachers" className="mt-0">
-          {teachers.length === 0 ? (
-            <EmptyState text="No verified faculty yet." />
+          {totalFaculty === 0 ? (
+            <EmptyState text="No verified faculty or teachers yet." />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {teachers.map((record: any) => {
+              {teachers.map((record) => {
                 const user = record.teacherProfile?.user;
                 if (!user) return null;
                 return (
@@ -183,7 +199,7 @@ export default async function MembersDirectoryPage({ params }: Props) {
                     user={user}
                     subtitle={record.designation ?? "Faculty"}
                     bio={
-                      record.teachingSubjects.length > 0
+                      record.teachingSubjects && record.teachingSubjects.length > 0
                         ? record.teachingSubjects.join(", ")
                         : record.bio
                     }
@@ -192,6 +208,10 @@ export default async function MembersDirectoryPage({ params }: Props) {
                   />
                 );
               })}
+
+              {customFaculty.map((faculty) => (
+                <CustomFacultyCard key={faculty.id} faculty={faculty} />
+              ))}
             </div>
           )}
         </TabsContent>
@@ -201,7 +221,7 @@ export default async function MembersDirectoryPage({ params }: Props) {
             <EmptyState text="No managers found." />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {managers.map(({ user }: { user: any }) => (
+              {managers.map(({ user }) => (
                 <MemberCard
                   key={user.id}
                   user={user}
@@ -214,6 +234,69 @@ export default async function MembersDirectoryPage({ params }: Props) {
         </TabsContent>
       </Tabs>
     </main>
+  );
+}
+
+function CustomFacultyCard({
+  faculty,
+}: {
+  faculty: {
+    id: string;
+    name: string;
+    designation: string | null;
+    experience: string | null;
+    subjects: string[] | string | null;
+    description: string | null;
+    imageUrl: string | null;
+  };
+}) {
+  const subjectsStr = Array.isArray(faculty.subjects)
+    ? faculty.subjects.join(", ")
+    : faculty.subjects || "";
+
+  return (
+    <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-amber-200 hover:shadow-md">
+      <div className="flex items-start gap-3">
+        <div className="relative size-12 shrink-0 overflow-hidden rounded-full bg-slate-100 border border-slate-200">
+          {faculty.imageUrl ? (
+            <Image src={faculty.imageUrl} alt={faculty.name} fill className="object-cover" />
+          ) : (
+            <span className="flex h-full items-center justify-center text-lg font-bold text-amber-700 bg-amber-50">
+              {faculty.name.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate font-semibold text-slate-900">{faculty.name}</h4>
+          {faculty.designation && (
+            <p className="truncate text-sm text-slate-500">{faculty.designation}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+          <BadgeCheck className="size-3" /> Faculty
+        </span>
+        {faculty.experience && (
+          <span className="inline-flex items-center rounded-lg border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+            {faculty.experience}
+          </span>
+        )}
+      </div>
+
+      {subjectsStr && (
+        <p className="mt-2 text-xs font-semibold text-emerald-700 truncate">
+          Subjects: {subjectsStr}
+        </p>
+      )}
+
+      {faculty.description && (
+        <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500">
+          {faculty.description}
+        </p>
+      )}
+    </article>
   );
 }
 

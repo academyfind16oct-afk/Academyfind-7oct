@@ -5,9 +5,10 @@ import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { Check, X, UserMinus, Clock, BadgeCheck, Users, GraduationCap, BookOpen, Lock } from "lucide-react";
+import { Check, X, UserMinus, Clock, BadgeCheck, GraduationCap, BookOpen, Lock, UserPlus } from "lucide-react";
 import { InviteMemberModal } from "@/components/manager/InviteMemberModal";
 import { PremiumLock } from "@/components/manager/PremiumLock";
+import EditFacultyMembers from "../profile/edit/EditFacultyMembers";
 
 import { approveMembership, rejectMembership, removeMember } from "./actions";
 
@@ -43,7 +44,7 @@ export default async function ManagerMembersPage({ params }: Props) {
     );
   }
 
-  const [pending, students, teachers] = await Promise.all([
+  const [pending, students, teachers, customFaculty] = await Promise.all([
     prisma.instituteMembership.findMany({
       where: { instituteId, status: "PENDING" },
       orderBy: { createdAt: "asc" },
@@ -99,11 +100,11 @@ export default async function ManagerMembersPage({ params }: Props) {
         },
       },
     }),
+    prisma.instituteFacultyMember.findMany({
+      where: { instituteId },
+      orderBy: { displayOrder: "asc" },
+    }),
   ]);
-
-  const approveFn = approveMembership.bind(null);
-  const rejectFn = rejectMembership.bind(null);
-  const removeFn = removeMember.bind(null);
 
   return (
     <div className="space-y-10">
@@ -114,13 +115,19 @@ export default async function ManagerMembersPage({ params }: Props) {
             Manage student and teacher memberships for {institute.name}.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/institute/${institute.id}-${institute.slug}/members`}
             className="text-sm font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-1"
           >
             View public directory →
           </Link>
+          <a
+            href="#custom-faculty-showcase"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition shadow-sm"
+          >
+            <UserPlus className="size-3.5 text-amber-700" /> Add Teacher (No Account)
+          </a>
           {(institute.subscriptionPlan === "BASIC" || institute.subscriptionPlan === "VERIFIED") ? (
             <PremiumLock
               title="Invites Locked"
@@ -148,7 +155,7 @@ export default async function ManagerMembersPage({ params }: Props) {
           <EmptyCard text="No pending requests." />
         ) : (
           <div className="space-y-3">
-            {pending.map((m: any) => (
+            {pending.map((m) => (
               <div
                 key={m.id}
                 className="rounded-2xl border border-stone-200 bg-stone-50 p-5"
@@ -229,7 +236,7 @@ export default async function ManagerMembersPage({ params }: Props) {
           <EmptyCard text="No students yet." />
         ) : (
           <div className="space-y-3">
-            {students.map((m: any) => (
+            {students.map((m) => (
               <div
                 key={m.id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4"
@@ -275,73 +282,112 @@ export default async function ManagerMembersPage({ params }: Props) {
         )}
       </section>
 
-      {/* ── TEACHERS ── */}
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-stone-800">
-          <BookOpen className="size-5 text-amber-500" /> Faculty
-          <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
-            {teachers.length}
-          </span>
-        </h2>
-        {teachers.length === 0 ? (
-          <EmptyCard text="No faculty yet." />
-        ) : (
-          <div className="space-y-3">
-            {teachers.map((m: any) => (
-              <div
-                key={m.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <UserAvatar user={m.user} size="sm" />
-                  <div>
-                    <span className="font-semibold text-stone-900">
-                      {m.user.name ?? m.user.username}
-                    </span>
-                    <p className="text-xs text-stone-500">
-                      {m.teacherRecord?.designation ?? "Faculty"}
-                      {m.teacherRecord?.department ? ` · ${m.teacherRecord.department}` : ""}
-                    </p>
-                    {m.teacherRecord?.teachingSubjects.length ? (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {m.teacherRecord.teachingSubjects.slice(0, 3).map((s: any) => (
-                          <span key={s} className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-600">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
+      {/* ── FACULTY & TEACHERS SECTION ── */}
+      <section className="space-y-6 pt-6 border-t border-stone-200">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-bold text-stone-900">
+            <BookOpen className="size-5 text-amber-600" /> Faculty & Teachers
+          </h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Manage your educators. You can directly showcase teachers without accounts, or link registered AcademyFind teachers.
+          </p>
+        </div>
+
+        {/* 1. DIRECT FACULTY SHOWCASE (NO ACCOUNT REQUIRED) */}
+        <div id="custom-faculty-showcase" className="scroll-mt-10">
+          <EditFacultyMembers
+            instituteId={instituteId}
+            currentFaculty={customFaculty}
+            maxLimit={25}
+          />
+        </div>
+
+        {/* 2. REGISTERED FACULTY (ACADEMYFIND USER ACCOUNTS) */}
+        <div className="rounded-3xl border border-stone-200/80 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-stone-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-stone-900">
+                  Registered Faculty Accounts
+                </h3>
+                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
+                  {teachers.length} Active
+                </span>
+              </div>
+              <p className="text-xs text-stone-500 mt-1 max-w-xl leading-relaxed">
+                Teachers with an individual AcademyFind account who can log in, edit their profile, and receive 1-on-1 direct messages from students.
+              </p>
+            </div>
+            {(institute.subscriptionPlan === "BASIC" || institute.subscriptionPlan === "VERIFIED") ? null : (
+              <InviteMemberModal instituteId={instituteId} />
+            )}
+          </div>
+
+          {teachers.length === 0 ? (
+            <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-stone-200 bg-stone-50/50">
+              <p className="text-sm font-semibold text-stone-700">No registered faculty accounts joined yet</p>
+              <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+                Teachers who need student chat and personal profiles can be invited using the &quot;Invite Member&quot; button.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {teachers.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-stone-50/60 p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <UserAvatar user={m.user} size="sm" />
+                    <div>
+                      <span className="font-semibold text-stone-900">
+                        {m.user.name ?? m.user.username}
+                      </span>
+                      <p className="text-xs text-stone-500">
+                        {m.teacherRecord?.designation ?? "Faculty"}
+                        {m.teacherRecord?.department ? ` · ${m.teacherRecord.department}` : ""}
+                      </p>
+                      {m.teacherRecord?.teachingSubjects.length ? (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {m.teacherRecord.teachingSubjects.slice(0, 3).map((s: string) => (
+                            <span key={s} className="rounded-md bg-white border border-stone-200 px-1.5 py-0.5 text-[10px] text-stone-600">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {m.teacherRecord?.isVerified && (
+                      <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                        <BadgeCheck className="size-3" /> Verified
+                      </span>
+                    )}
+                    {m.teacherRecord?.isFeatured && (
+                      <span className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                        ⭐ Featured
+                      </span>
+                    )}
+                    <form
+                      action={async () => {
+                        "use server";
+                        await removeMember(m.id);
+                      }}
+                    >
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                      >
+                        <UserMinus className="size-3" /> Remove
+                      </button>
+                    </form>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {m.teacherRecord?.isVerified && (
-                    <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                      <BadgeCheck className="size-3" /> Verified
-                    </span>
-                  )}
-                  {m.teacherRecord?.isFeatured && (
-                    <span className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                      ⭐ Featured
-                    </span>
-                  )}
-                  <form
-                    action={async () => {
-                      "use server";
-                      await removeMember(m.id);
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                    >
-                      <UserMinus className="size-3" /> Remove
-                    </button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

@@ -3,10 +3,25 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { User, Search, CheckCircle, Star } from "lucide-react";
+import { User, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+interface DrawerMember {
+    id: string;
+    courseName?: string | null;
+    designation?: string | null;
+    experience?: string | null;
+    subjects?: string[] | string | null;
+    user?: {
+        id: string;
+        name: string | null;
+        username: string | null;
+        image: string | null;
+        allowDms?: boolean;
+    } | null;
+}
 
 export function MemberDrawer({ 
     title, 
@@ -21,7 +36,7 @@ export function MemberDrawer({
 }) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
-    const [members, setMembers] = useState<any[]>([]);
+    const [members, setMembers] = useState<DrawerMember[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchMembers = async () => {
@@ -71,11 +86,11 @@ export function MemberDrawer({
                     {loading ? (
                         <div className="flex justify-center p-8"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div></div>
                     ) : members.length > 0 ? (
-                        members.map((m: any) => (
+                        members.map((m: DrawerMember) => (
                             <div key={m.id} className="rounded-2xl border border-slate-200 bg-white p-4 flex gap-4 items-center">
                                 <div className="w-12 h-12 rounded-full border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
                                     {m.user?.image ? (
-                                        <Image src={m.user.image} alt={m.user.name} width={48} height={48} className="w-full h-full object-cover"/>
+                                        <Image src={m.user.image} alt={m.user.name || "Member"} width={48} height={48} className="w-full h-full object-cover"/>
                                     ) : (
                                         <User className="w-full h-full p-2.5 text-slate-400"/>
                                     )}
@@ -90,7 +105,11 @@ export function MemberDrawer({
                                     {m.user?.allowDms && (
                                         <Link href={`/chat?userId=${m.user.id}`} className="text-xs bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 font-semibold">Message</Link>
                                     )}
-                                    <Link href={`/u/${m.user?.username}`} className="text-xs text-slate-500 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-semibold">Profile</Link>
+                                    {m.user?.username ? (
+                                        <Link href={`/u/${m.user.username}`} className="text-xs text-slate-500 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-semibold">Profile</Link>
+                                    ) : (
+                                        <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-semibold">Faculty</span>
+                                    )}
                                 </div>
                             </div>
                         ))

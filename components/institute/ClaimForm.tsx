@@ -75,8 +75,8 @@ export default function ClaimForm({ instituteId, instituteName, userId, defaultN
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-amber-200 rounded-full blur-[80px] opacity-40"></div>
 
         <div className="relative z-10">
-          <h1 className="text-3xl lg:text-4xl font-extrabold text-amber-950 mb-2 tracking-tight">
-            Claim Profile
+          <h1 className="text-3xl lg:text-4xl font-extrabold text-amber-950 mb-2 tracking-tight flex items-center gap-2.5 flex-wrap">
+            Claim Profile <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200/60 uppercase tracking-wide">100% Free</span>
           </h1>
           <p className="text-lg font-bold text-amber-600 mb-4 pb-4 border-b border-amber-200">
             {instituteName}
