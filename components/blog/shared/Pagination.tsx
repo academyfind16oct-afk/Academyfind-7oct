@@ -1,7 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition, MouseEvent } from "react";
 
 type PaginationProps = {
   currentPage: number;
@@ -15,21 +17,50 @@ export default function Pagination({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+  const [targetPage, setTargetPage] = useState<number | null>(null);
 
   if (totalPages <= 1) {
     return null;
   }
 
-  function goToPage(page: number) {
-    const params = new URLSearchParams(searchParams.toString());
-
+  function getPageUrl(page: number): string {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
     if (page <= 1) {
       params.delete("page");
     } else {
       params.set("page", page.toString());
     }
+    const queryString = params.toString();
+    return queryString ? `${pathname}?${queryString}` : pathname;
+  }
 
-    router.push(`${pathname}?${params.toString()}`);
+  function handlePageClick(e: MouseEvent<HTMLAnchorElement>, page: number) {
+    e.preventDefault();
+    if (page === currentPage || page < 1 || page > totalPages || isPending) {
+      return;
+    }
+
+    setTargetPage(page);
+
+    // Smooth scroll to top of search results so user is not stuck looking at bottom buttons
+    const target =
+      document.getElementById("search-results-content") ||
+      document.getElementById("search-results-grid") ||
+      document.querySelector("main");
+
+    if (target) {
+      const yOffset = -90;
+      const y = target.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 300, behavior: "smooth" });
+    }
+
+    const url = getPageUrl(page);
+    startTransition(() => {
+      router.push(url);
+    });
   }
 
   const pages: (number | "...")[] = [];
@@ -60,48 +91,111 @@ export default function Pagination({
     pages.push(totalPages);
   }
 
-  return (
-    <nav className="mt-12 flex items-center justify-center gap-2">
-      <button
-        onClick={() => goToPage(currentPage - 1)}
-        disabled={currentPage === 1}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Previous
-      </button>
+  const prevPage = currentPage - 1;
+  const nextPage = currentPage + 1;
+  const isFirst = currentPage <= 1;
+  const isLast = currentPage >= totalPages;
 
-      {pages.map((page: number | "...", index: number) =>
-        page === "..." ? (
+  return (
+    <nav
+      aria-label="Blog Pagination"
+      className="mt-12 flex flex-col items-center justify-center gap-3 select-none"
+    >
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+        {/* Previous Button */}
+        {isFirst ? (
           <span
-            key={`ellipsis-${index}`}
-            className="px-3 text-slate-500"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2 text-sm font-medium text-slate-400 cursor-not-allowed opacity-50"
+            aria-disabled="true"
           >
-            ...
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Previous</span>
           </span>
         ) : (
-          <button
-            key={page}
-            onClick={() => goToPage(page)}
-            className={`h-10 min-w-10 rounded-xl border text-sm font-semibold transition ${
-              page === currentPage
-                ? "border-amber-500 bg-amber-500 text-white"
-                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          <Link
+            href={getPageUrl(prevPage)}
+            onClick={(e) => handlePageClick(e, prevPage)}
+            prefetch={false}
+            className={`inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all duration-200 hover:border-amber-300 hover:bg-amber-50/50 hover:text-amber-700 active:scale-95 ${
+              isPending ? "pointer-events-none opacity-60" : ""
             }`}
           >
-            {page}
-          </button>
-        )
-      )}
+            {isPending && targetPage === prevPage ? (
+              <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">Previous</span>
+          </Link>
+        )}
 
-      <button
-        onClick={() => goToPage(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Next
-        <ChevronRight className="h-4 w-4" />
-      </button>
+        {/* Page Numbers */}
+        {pages.map((page: number | "...", index: number) =>
+          page === "..." ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="px-2 text-slate-400 font-medium"
+            >
+              ...
+            </span>
+          ) : (
+            <Link
+              key={page}
+              href={getPageUrl(page)}
+              onClick={(e) => handlePageClick(e, page)}
+              prefetch={false}
+              className={`relative inline-flex h-10 min-w-10 items-center justify-center rounded-xl text-sm font-bold transition-all duration-200 active:scale-95 ${
+                page === currentPage
+                  ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25 ring-2 ring-amber-400/40"
+                  : isPending && targetPage === page
+                  ? "border border-amber-400 bg-amber-50 text-amber-700 ring-2 ring-amber-300/50 animate-pulse"
+                  : "border border-slate-200/90 bg-white text-slate-700 hover:border-amber-400 hover:bg-amber-50/50 hover:text-amber-700 shadow-sm"
+              } ${isPending ? "pointer-events-none" : ""}`}
+            >
+              {isPending && targetPage === page ? (
+                <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+              ) : (
+                page
+              )}
+            </Link>
+          )
+        )}
+
+        {/* Next Button */}
+        {isLast ? (
+          <span
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2 text-sm font-medium text-slate-400 cursor-not-allowed opacity-50"
+            aria-disabled="true"
+          >
+            <span className="hidden sm:inline">Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </span>
+        ) : (
+          <Link
+            href={getPageUrl(nextPage)}
+            onClick={(e) => handlePageClick(e, nextPage)}
+            prefetch={false}
+            className={`inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all duration-200 hover:border-amber-300 hover:bg-amber-50/50 hover:text-amber-700 active:scale-95 ${
+              isPending ? "pointer-events-none opacity-60" : ""
+            }`}
+          >
+            <span className="hidden sm:inline">Next</span>
+            {isPending && targetPage === nextPage ? (
+              <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </Link>
+        )}
+      </div>
+
+      {/* Subtle feedback indicator during page transition */}
+      {isPending && targetPage && (
+        <div className="flex items-center gap-2 rounded-full bg-amber-50/90 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200/60 shadow-sm animate-in fade-in duration-200">
+          <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
+          <span>Loading page {targetPage}...</span>
+        </div>
+      )}
     </nav>
   );
 }

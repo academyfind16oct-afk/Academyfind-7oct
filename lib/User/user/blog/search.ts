@@ -158,62 +158,96 @@ export async function searchBlogPosts({
         ];
       }
 
-      // Fetch candidate blog posts without loading heavy contentHtml/contentMarkdown
-      const dbPosts = await prisma.blogPost.findMany({
-        where: dbWhere,
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          excerpt: true,
-          coverImage: true,
-          coverImageAlt: true,
-          readingTime: true,
-          publishedAt: true,
-          viewCount: true,
-          likeCount: true,
-          commentCount: true,
-          authorProfile: {
-            select: {
-              displayName: true,
-              username: true,
-              avatarUrl: true,
-              isVerified: true,
-            },
+      const selectFields = {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        coverImage: true,
+        coverImageAlt: true,
+        readingTime: true,
+        publishedAt: true,
+        viewCount: true,
+        likeCount: true,
+        commentCount: true,
+        authorProfile: {
+          select: {
+            displayName: true,
+            username: true,
+            avatarUrl: true,
+            isVerified: true,
           },
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
           },
-          brand: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              avatarUrl: true,
-            },
+        },
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            avatarUrl: true,
           },
-          tags: {
-            select: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                },
+        },
+        tags: {
+          select: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
               },
             },
           },
         },
+      };
+
+      // High-performance direct SQL pagination when no search query is present
+      if (!q) {
+        let orderBy: any = [{ publishedAt: "desc" }, { id: "desc" }];
+        if (sort === "oldest") {
+          orderBy = [{ publishedAt: "asc" }, { id: "asc" }];
+        } else if (sort === "popular") {
+          orderBy = [{ viewCount: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
+        }
+
+        const [paginatedPosts, total] = await Promise.all([
+          prisma.blogPost.findMany({
+            where: dbWhere,
+            orderBy,
+            skip,
+            take: limit,
+            select: selectFields,
+          }),
+          prisma.blogPost.count({ where: dbWhere }),
+        ]);
+
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        return {
+          posts: paginatedPosts,
+          total,
+          page: pageNum,
+          limit,
+          totalPages,
+          hasNextPage: pageNum < totalPages,
+          hasPreviousPage: pageNum > 1,
+        };
+      }
+
+      // Fetch candidate blog posts without loading heavy contentHtml/contentMarkdown
+      const dbPosts = await prisma.blogPost.findMany({
+        where: dbWhere,
+        select: selectFields,
       });
 
-      if (q) {
-        const rawTokens = q.split(/\s+/).filter((t) => t.length > 0);
-        const coreTokens = rawTokens.filter((t) => !GENERIC_MODIFIERS.has(t) && t.length > 1);
-        const searchTokens = coreTokens.length > 0 ? coreTokens : rawTokens;
+      const rawTokens = q.split(/\s+/).filter((t) => t.length > 0);
+      const coreTokens = rawTokens.filter((t) => !GENERIC_MODIFIERS.has(t) && t.length > 1);
+      const searchTokens = coreTokens.length > 0 ? coreTokens : rawTokens;
 
         const scoredPosts: { post: any; score: number }[] = [];
 
@@ -326,34 +360,10 @@ export async function searchBlogPosts({
         }
 
         rankedPosts = scoredPosts.map((sp) => sp.post);
-      } else {
-        // Deterministic sorting if no search query
-        rankedPosts = [...dbPosts];
-        rankedPosts.sort((a, b) => {
-          if (sort === "oldest") {
-            const timeA = a.publishedAt?.getTime() ?? 0;
-            const timeB = b.publishedAt?.getTime() ?? 0;
-            if (timeA !== timeB) return timeA - timeB;
-            return a.id.localeCompare(b.id);
-          } else if (sort === "popular") {
-            if (b.viewCount !== a.viewCount) return b.viewCount - a.viewCount;
-            const timeA = a.publishedAt?.getTime() ?? 0;
-            const timeB = b.publishedAt?.getTime() ?? 0;
-            if (timeB !== timeA) return timeB - timeA;
-            return b.id.localeCompare(a.id);
-          } else {
-            // default: "latest" or "relevance" without query
-            const timeA = a.publishedAt?.getTime() ?? 0;
-            const timeB = b.publishedAt?.getTime() ?? 0;
-            if (timeB !== timeA) return timeB - timeA;
-            return b.id.localeCompare(a.id);
-          }
-        });
-      }
 
-      const total = rankedPosts.length;
-      const paginatedPosts = rankedPosts.slice(skip, skip + limit);
-      const totalPages = Math.ceil(total / limit) || 1;
+        const total = rankedPosts.length;
+        const paginatedPosts = rankedPosts.slice(skip, skip + limit);
+        const totalPages = Math.ceil(total / limit) || 1;
 
       return {
         posts: paginatedPosts,

@@ -105,7 +105,7 @@ export default async function SearchPage({
             />
           </aside>
 
-          <main>
+          <main id="search-results-content">
             {results.posts.length > 0 ? (
               <>
                 <SearchResultGrid

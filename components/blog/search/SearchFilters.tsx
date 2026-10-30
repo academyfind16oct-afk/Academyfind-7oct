@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Loader2 } from "lucide-react";
 
 type SearchFiltersProps = {
   categories: {
@@ -24,6 +26,7 @@ export default function SearchFilters({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -36,15 +39,23 @@ export default function SearchFilters({
 
     params.delete("page");
 
-    router.push(`${pathname}?${params.toString()}`);
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+    });
   }
 
   return (
     <aside className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div>
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900">
           Filters
         </h2>
+        {isPending && (
+          <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 border border-amber-200/50 animate-in fade-in duration-200">
+            <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
+            Updating...
+          </span>
+        )}
       </div>
 
       {/* Sort */}
@@ -54,9 +65,12 @@ export default function SearchFilters({
         </label>
 
         <select
+          disabled={isPending}
           value={searchParams.get("sort") ?? "relevance"}
           onChange={(e) => updateParam("sort", e.target.value)}
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-amber-500"
+          className={`w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-amber-500 ${
+            isPending ? "opacity-60 cursor-not-allowed bg-slate-50" : ""
+          }`}
         >
           <option value="relevance">Relevance</option>
           <option value="latest">Latest</option>
@@ -72,9 +86,12 @@ export default function SearchFilters({
         </label>
 
         <select
+          disabled={isPending}
           value={searchParams.get("category") ?? ""}
           onChange={(e) => updateParam("category", e.target.value)}
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-amber-500"
+          className={`w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-amber-500 ${
+            isPending ? "opacity-60 cursor-not-allowed bg-slate-50" : ""
+          }`}
         >
           <option value="">All Categories</option>
 
@@ -96,9 +113,12 @@ export default function SearchFilters({
         </label>
 
         <select
+          disabled={isPending}
           value={searchParams.get("tag") ?? ""}
           onChange={(e) => updateParam("tag", e.target.value)}
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-amber-500"
+          className={`w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-amber-500 ${
+            isPending ? "opacity-60 cursor-not-allowed bg-slate-50" : ""
+          }`}
         >
           <option value="">All Tags</option>
 
@@ -114,8 +134,15 @@ export default function SearchFilters({
       </div>
 
       <button
-        onClick={() => router.push(pathname)}
-        className="w-full rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-100"
+        disabled={isPending}
+        onClick={() => {
+          startTransition(() => {
+            router.push(pathname);
+          });
+        }}
+        className={`w-full rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-100 ${
+          isPending ? "opacity-60 cursor-not-allowed" : ""
+        }`}
       >
         Clear Filters
       </button>
