@@ -14,6 +14,33 @@ export type SearchBlogPostsParams = {
   sort?: "relevance" | "latest" | "oldest" | "popular";
 };
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function countWholeWordMatches(text: string, word: string): number {
+  if (!text || !word) return 0;
+  const escaped = escapeRegex(word);
+  const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, 'gi');
+  const matches = text.match(regex);
+  return matches ? matches.length : 0;
+}
+
+function hasPhraseMatch(text: string, phrase: string): boolean {
+  if (!text || !phrase) return false;
+  const escaped = escapeRegex(phrase.trim());
+  const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, 'i');
+  return regex.test(text);
+}
+
+const GENERIC_MODIFIERS = new Set([
+  'class', 'classes', 'coaching', 'institute', 'institutes',
+  'academy', 'academies', 'center', 'centers', 'tuition', 'tuitions',
+  'course', 'courses', 'guide', 'preparation', 'school', 'schools',
+  'training', 'best', 'top', 'near', 'me', 'in', 'at', 'for',
+  'online', 'offline', 'vs', 'and', 'or', 'to', 'the', 'a', 'an'
+]);
+
 export async function searchBlogPosts({
   query = "",
   page = 1,
@@ -79,9 +106,7 @@ export async function searchBlogPosts({
       hasPreviousPage: page > 1,
     };
   } catch (error) {
-    // Requirements #14 & #5: Log failure with console.error and degrade gracefully to DB search fallback
-    console.error("Meilisearch global_search search error, degrading to database query fallback:", error);
-
+    // Graceful degradation to database search with precise word-boundary & relevance scoring
     try {
       const pageNum = Math.max(1, page);
       const skip = (pageNum - 1) * limit;
@@ -103,76 +128,207 @@ export async function searchBlogPosts({
         };
       }
 
-      const q = query.trim();
+      const q = query.trim().toLowerCase();
+      let rankedPosts: any[] = [];
+
       if (q) {
-        dbWhere.OR = [
-          { title: { contains: q, mode: "insensitive" } },
-          { excerpt: { contains: q, mode: "insensitive" } },
-          { contentHtml: { contains: q, mode: "insensitive" } },
+        const rawTokens = q.split(/\s+/).filter((t) => t.length > 0);
+        const coreTokens = rawTokens.filter((t) => !GENERIC_MODIFIERS.has(t) && t.length > 1);
+        const searchTokens = coreTokens.length > 0 ? coreTokens : rawTokens;
+
+        // Efficiently pre-filter candidate posts at the DB level using title, excerpt, category & tags
+        // (Excluding contentHtml so substring collisions like 'guidance' or 'attendance' never pull 100+ unrelated posts)
+        dbWhere.AND = [
+          {
+            OR: [
+              ...searchTokens.map((token) => ({
+                title: { contains: token, mode: "insensitive" as const },
+              })),
+              ...searchTokens.map((token) => ({
+                excerpt: { contains: token, mode: "insensitive" as const },
+              })),
+              ...searchTokens.map((token) => ({
+                category: { name: { contains: token, mode: "insensitive" as const } },
+              })),
+              ...searchTokens.map((token) => ({
+                tags: { some: { tag: { name: { contains: token, mode: "insensitive" as const } } } },
+              })),
+            ],
+          },
         ];
       }
 
-      // Fetch matching blog posts
-      const [dbPosts, total] = await Promise.all([
-        prisma.blogPost.findMany({
-          where: dbWhere,
-          include: {
-            authorProfile: true,
-            category: true,
-            brand: true,
-            tags: {
-              include: {
-                tag: true,
+      // Fetch candidate blog posts without loading heavy contentHtml/contentMarkdown
+      const dbPosts = await prisma.blogPost.findMany({
+        where: dbWhere,
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          excerpt: true,
+          coverImage: true,
+          coverImageAlt: true,
+          readingTime: true,
+          publishedAt: true,
+          viewCount: true,
+          likeCount: true,
+          commentCount: true,
+          authorProfile: {
+            select: {
+              displayName: true,
+              username: true,
+              avatarUrl: true,
+              isVerified: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              avatarUrl: true,
+            },
+          },
+          tags: {
+            select: {
+              tag: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
               },
             },
           },
-        }),
-        prisma.blogPost.count({ where: dbWhere }),
-      ]);
+        },
+      });
 
-      // Relevance ranking algorithm in JS (since complex text search ranking in SQLite/Postgres varies)
-      let rankedPosts = [...dbPosts];
       if (q) {
-        const lowerQ = q.toLowerCase();
-        const postsWithWeights = rankedPosts.map((post) => {
-          let weight = 0;
-          const title = post.title.toLowerCase();
-          const excerpt = (post.excerpt ?? "").toLowerCase();
-          const content = post.contentHtml.toLowerCase();
+        const rawTokens = q.split(/\s+/).filter((t) => t.length > 0);
+        const coreTokens = rawTokens.filter((t) => !GENERIC_MODIFIERS.has(t) && t.length > 1);
+        const searchTokens = coreTokens.length > 0 ? coreTokens : rawTokens;
 
-          if (title === lowerQ) {
-            weight += 20;
-          } else if (title.includes(lowerQ)) {
-            weight += 10;
+        const scoredPosts: { post: any; score: number }[] = [];
+
+        for (const post of dbPosts) {
+          let score = 0;
+          const title = post.title || "";
+          const excerpt = post.excerpt || "";
+          const categoryName = post.category?.name || "";
+          const tagNames = post.tags?.map((t: any) => t.tag?.name).filter(Boolean) || [];
+
+          // 1. Exact phrase matching in title / excerpt (Highest priority)
+          if (hasPhraseMatch(title, q)) {
+            score += 50;
+          } else if (hasPhraseMatch(excerpt, q)) {
+            score += 25;
           }
 
-          if (excerpt.includes(lowerQ)) {
-            weight += 5;
+          // 2. Category & Tag exact phrase match
+          if (hasPhraseMatch(categoryName, q)) {
+            score += 30;
+          }
+          for (const tag of tagNames) {
+            if (hasPhraseMatch(tag, q)) {
+              score += 25;
+              break;
+            }
           }
 
-          if (content.includes(lowerQ)) {
-            weight += 1;
+          // 3. Whole-word token matching (Never match substrings in unrelated words like 'guidance' or 'avoidance')
+          let matchedCoreTokensCount = 0;
+          for (const token of searchTokens) {
+            let tokenMatched = false;
+
+            const inTitle = countWholeWordMatches(title, token);
+            if (inTitle > 0) {
+              tokenMatched = true;
+              score += Math.min(inTitle * 20, 40);
+            }
+
+            const inExcerpt = countWholeWordMatches(excerpt, token);
+            if (inExcerpt > 0) {
+              tokenMatched = true;
+              score += Math.min(inExcerpt * 10, 20);
+            }
+
+            for (const tag of tagNames) {
+              if (countWholeWordMatches(tag, token) > 0) {
+                tokenMatched = true;
+                score += 15;
+                break;
+              }
+            }
+
+            if (countWholeWordMatches(categoryName, token) > 0) {
+              tokenMatched = true;
+              score += 15;
+            }
+
+            if (tokenMatched) {
+              matchedCoreTokensCount++;
+            }
           }
 
-          return { post, weight };
-        });
-
-        // Sort by relevance weight desc, then publishedAt desc, then id desc
-        postsWithWeights.sort((a, b) => {
-          if (b.weight !== a.weight) {
-            return b.weight - a.weight;
+          // Reward matching all query tokens
+          if (searchTokens.length > 1 && matchedCoreTokensCount === searchTokens.length) {
+            score += 20;
           }
-          const timeA = a.post.publishedAt?.getTime() ?? 0;
-          const timeB = b.post.publishedAt?.getTime() ?? 0;
-          if (timeB !== timeA) {
-            return timeB - timeA;
-          }
-          return b.post.id.localeCompare(a.post.id);
-        });
 
-        rankedPosts = postsWithWeights.map((pw) => pw.post);
+          // MANDATORY RELEVANCE FILTER:
+          // Must match at least one search token as a whole word, and have a positive relevance score
+          if (score > 0 && matchedCoreTokensCount > 0) {
+            scoredPosts.push({ post, score });
+          }
+        }
+
+        // Apply sorting to scored posts
+        if (sort === "latest") {
+          scoredPosts.sort((a, b) => {
+            const timeA = a.post.publishedAt?.getTime() ?? 0;
+            const timeB = b.post.publishedAt?.getTime() ?? 0;
+            if (timeB !== timeA) return timeB - timeA;
+            return b.post.id.localeCompare(a.post.id);
+          });
+        } else if (sort === "oldest") {
+          scoredPosts.sort((a, b) => {
+            const timeA = a.post.publishedAt?.getTime() ?? 0;
+            const timeB = b.post.publishedAt?.getTime() ?? 0;
+            if (timeA !== timeB) return timeA - timeB;
+            return a.post.id.localeCompare(b.post.id);
+          });
+        } else if (sort === "popular") {
+          scoredPosts.sort((a, b) => {
+            if (b.post.viewCount !== a.post.viewCount) return b.post.viewCount - a.post.viewCount;
+            const timeA = a.post.publishedAt?.getTime() ?? 0;
+            const timeB = b.post.publishedAt?.getTime() ?? 0;
+            if (timeB !== timeA) return timeB - timeA;
+            return b.post.id.localeCompare(a.post.id);
+          });
+        } else {
+          // default: "relevance"
+          scoredPosts.sort((a, b) => {
+            if (b.score !== a.score) {
+              return b.score - a.score;
+            }
+            const timeA = a.post.publishedAt?.getTime() ?? 0;
+            const timeB = b.post.publishedAt?.getTime() ?? 0;
+            if (timeB !== timeA) return timeB - timeA;
+            return b.post.id.localeCompare(a.post.id);
+          });
+        }
+
+        rankedPosts = scoredPosts.map((sp) => sp.post);
       } else {
         // Deterministic sorting if no search query
+        rankedPosts = [...dbPosts];
         rankedPosts.sort((a, b) => {
           if (sort === "oldest") {
             const timeA = a.publishedAt?.getTime() ?? 0;
@@ -195,7 +351,7 @@ export async function searchBlogPosts({
         });
       }
 
-      // Apply pagination page offset limits
+      const total = rankedPosts.length;
       const paginatedPosts = rankedPosts.slice(skip, skip + limit);
       const totalPages = Math.ceil(total / limit) || 1;
 
@@ -208,7 +364,6 @@ export async function searchBlogPosts({
         hasNextPage: pageNum < totalPages,
         hasPreviousPage: pageNum > 1,
       };
-
     } catch (dbFallbackError) {
       console.error("Search database fallback query failed too:", dbFallbackError);
       return {

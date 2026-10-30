@@ -71,42 +71,62 @@ export async function GET(request: NextRequest) {
 
       const { prisma } = await import("@/lib/prisma");
 
-      const [blogs, categories] = await Promise.all([
+      const escapedQ = fallbackQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const wordRegex = new RegExp(`(^|[^a-zA-Z0-9])${escapedQ}([^a-zA-Z0-9]|$)`, 'i');
+
+      const [candidateBlogs, candidateCategories] = await Promise.all([
         prisma.blogPost.findMany({
           where: {
             status: "PUBLISHED",
             visibility: "PUBLIC",
-            OR: [
-              { title: { contains: fallbackQuery, mode: "insensitive" } },
-            ],
+            title: { contains: fallbackQuery, mode: "insensitive" },
           },
-          include: { category: true },
-          take: 4,
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            category: { select: { name: true } },
+          },
+          take: 12,
         }),
         prisma.blogCategory.findMany({
           where: {
             isActive: true,
             name: { contains: fallbackQuery, mode: "insensitive" },
           },
-          take: 4,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+          take: 8,
         }),
       ]);
 
+      // Enforce word-boundary filtering to eliminate substring collisions (e.g. 'dance' matching 'avoidance' or 'guidance')
+      const filteredBlogs = candidateBlogs
+        .filter((b) => wordRegex.test(b.title))
+        .slice(0, 4);
+
+      const filteredCategories = candidateCategories
+        .filter((c) => wordRegex.test(c.name))
+        .slice(0, 4);
+
       const suggestions = [
-        ...blogs.map((b: any) => ({
+        ...filteredBlogs.map((b: any) => ({
           id: b.id,
           type: "blog",
           title: b.title,
           subtitle: b.category?.name,
           url: `/blog/${b.slug}`,
         })),
-        ...categories.map((c: any) => ({
+        ...filteredCategories.map((c: any) => ({
           id: c.id,
           type: "category",
           title: c.name,
           subtitle: "Category",
           url: `/blog/category/${c.slug}`,
-        }))
+        })),
       ];
 
       return NextResponse.json(suggestions, { status: 200 });
