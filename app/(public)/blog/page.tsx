@@ -89,7 +89,7 @@ export default async function BlogPage({ searchParams }: Props) {
     // Active Categories list
     prisma.blogCategory.findMany({
       where: { isActive: true },
-      orderBy: { order: "asc" },
+      orderBy: [{ postCount: "desc" }, { order: "asc" }, { name: "asc" }],
       select: { id: true, name: true, slug: true },
     }),
 
@@ -130,6 +130,7 @@ export default async function BlogPage({ searchParams }: Props) {
         brand: true,
       },
       orderBy: [
+        { isPinned: "desc" },
         { publishedAt: "desc" },
         { id: "desc" },
       ],

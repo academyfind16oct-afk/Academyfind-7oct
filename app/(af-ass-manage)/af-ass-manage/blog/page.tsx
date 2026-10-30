@@ -50,6 +50,7 @@ type AdminBlogPageProps = {
     query?: string;
     status?: string;
     brand?: string;
+    category?: string;
     sort?: string;
     sortBy?: string;
   }>;
@@ -67,6 +68,7 @@ interface PostListItem {
   isPinned: boolean;
   viewCount: number;
   commentCount: number;
+  createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
   brand: { id: string; name: string; avatarUrl: string | null } | null;
@@ -83,7 +85,7 @@ interface PostListItem {
     name: string;
     phone: string | null;
   } | null;
-  category: { name: string } | null;
+  category: { id?: string; name: string } | null;
 }
 
 export default async function AdminBlogPage({
@@ -98,6 +100,7 @@ export default async function AdminBlogPage({
     : undefined;
 
   const brandId = params.brand && params.brand !== ALL ? params.brand : undefined;
+  const categoryId = params.category && params.category !== ALL ? params.category : undefined;
   const sort = params.sort || params.sortBy || "latest";
 
   const where = {
@@ -111,25 +114,26 @@ export default async function AdminBlogPage({
       : {}),
     ...(status ? { status } : {}),
     ...(brandId ? { brandId } : {}),
+    ...(categoryId ? { categoryId } : {}),
   };
 
   const orderBy: any = (() => {
     switch (sort) {
       case "views":
       case "most_viewed":
-        return [{ viewCount: "desc" }, { updatedAt: "desc" }];
+        return [{ isPinned: "desc" }, { viewCount: "desc" }, { createdAt: "desc" }];
       case "oldest":
-        return [{ createdAt: "asc" }];
+        return [{ isPinned: "desc" }, { createdAt: "asc" }];
       case "comments":
       case "most_commented":
-        return [{ commentCount: "desc" }, { updatedAt: "desc" }];
+        return [{ isPinned: "desc" }, { commentCount: "desc" }, { createdAt: "desc" }];
       case "latest":
       default:
-        return [{ isPinned: "desc" }, { updatedAt: "desc" }];
+        return [{ isPinned: "desc" }, { createdAt: "desc" }];
     }
   })();
 
-  const [posts, total, groupedStatuses, brands] = await Promise.all([
+  const [posts, total, groupedStatuses, brands, categories] = await Promise.all([
     prisma.blogPost.findMany({
       where,
       orderBy,
@@ -146,6 +150,7 @@ export default async function AdminBlogPage({
         isPinned: true,
         viewCount: true,
         commentCount: true,
+        createdAt: true,
         updatedAt: true,
         publishedAt: true,
         brand: {
@@ -171,7 +176,7 @@ export default async function AdminBlogPage({
           },
         },
         category: {
-          select: { name: true },
+          select: { id: true, name: true },
         },
       },
     }) as Promise<PostListItem[]>,
@@ -180,6 +185,11 @@ export default async function AdminBlogPage({
     prisma.blogBrand.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
+    }),
+    prisma.blogCategory.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, slug: true },
     }),
   ]);
 
@@ -193,6 +203,7 @@ export default async function AdminBlogPage({
     if (query) next.set("query", query);
     if (status) next.set("status", status);
     if (brandId) next.set("brand", brandId);
+    if (categoryId) next.set("category", categoryId);
     if (sort && sort !== "latest") next.set("sort", sort);
     next.set("page", String(targetPage));
     return `/af-ass-manage/blog?${next.toString()}`;
@@ -256,8 +267,10 @@ export default async function AdminBlogPage({
           query={query}
           status={status}
           brandId={brandId}
+          categoryId={categoryId}
           sort={sort}
           brands={brands}
+          categories={categories}
           ALL={ALL}
         />
       </Suspense>
@@ -363,9 +376,26 @@ export default async function AdminBlogPage({
                   </div>
                 </td>
                 <td className="p-4 text-xs text-slate-500">
-                  <p>Upd: {post.updatedAt.toLocaleDateString("en-IN")}</p>
-                  {post.publishedAt && (
-                    <p className="mt-1 text-slate-400">Pub: {post.publishedAt.toLocaleDateString("en-IN")}</p>
+                  {post.publishedAt ? (
+                    <div>
+                      <p className="font-semibold text-slate-800">
+                        Pub: {post.publishedAt.toLocaleDateString("en-IN")}
+                      </p>
+                      {post.updatedAt.getTime() - post.publishedAt.getTime() > 24 * 60 * 60 * 1000 && (
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          Upd: {post.updatedAt.toLocaleDateString("en-IN")}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-medium text-slate-700">
+                        Upd: {post.updatedAt.toLocaleDateString("en-IN")}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">
+                        Created: {post.createdAt.toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
                   )}
                 </td>
                 <td className="p-4">

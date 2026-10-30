@@ -18,8 +18,10 @@ type AdminBlogFilterProps = {
   query: string;
   status: string | undefined;
   brandId: string | undefined;
+  categoryId?: string | undefined;
   sort?: string;
   brands: { id: string; name: string }[];
+  categories?: { id: string; name: string; slug: string }[];
   ALL: string;
 };
 
@@ -27,8 +29,10 @@ export default function AdminBlogFilter({
   query,
   status,
   brandId,
+  categoryId,
   sort = "latest",
   brands,
+  categories = [],
   ALL,
 }: AdminBlogFilterProps) {
   const router = useRouter();
@@ -63,7 +67,7 @@ export default function AdminBlogFilter({
     <form 
       ref={formRef}
       onSubmit={handleSubmit}
-      className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_160px_180px_160px]"
+      className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_180px_150px_160px_150px]"
     >
       <div className="relative sm:col-span-2 lg:col-span-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -81,6 +85,26 @@ export default function AdminBlogFilter({
           onBlur={() => handleSubmit()}
         />
       </div>
+
+      <Select 
+        name="category" 
+        value={categoryId ?? ALL}
+        onValueChange={(val) => {
+          updateFilters({ category: val });
+        }}
+      >
+        <SelectTrigger className="h-10 w-full bg-white">
+          <SelectValue placeholder="All categories" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72 overflow-y-auto">
+          <SelectItem value={ALL}>All categories ({categories.length})</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category.id} value={category.id}>
+              {category.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <Select 
         name="status" 
