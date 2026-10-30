@@ -250,13 +250,13 @@ export default function SubscriptionClient({
           </div>
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/25 text-white font-extrabold text-[10px] uppercase tracking-wider mb-1">
-              Limited Time Diwali Special
+              Limited Time Offer • Next 15 Days Only
             </div>
             <h3 className="text-lg sm:text-xl font-black tracking-tight">
-              Diwali Dhamaka: Verified Annual Plan is 100% FREE!
+              Diwali Dhamaka: Verified Annual Plan is 100% FREE for 1 Year!
             </h3>
             <p className="text-xs sm:text-sm text-amber-100 font-medium mt-0.5">
-              Get the official Verified Badge, edit your full institute profile, and capture direct student leads at zero cost for 1 full year.
+              Limited time Diwali offer valid for the next 15 days! Get your verified badge, edit full profile details, and capture student leads at ₹0 for 1 full year.
             </p>
           </div>
         </div>

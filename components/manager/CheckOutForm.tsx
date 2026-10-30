@@ -275,7 +275,7 @@ export default function CheckoutForm({
               <span className="font-bold text-slate-800 text-lg block">Total To Pay</span>
               {finalPrice === 0 && (
                 <span className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5">
-                  🪔 Diwali Special (100% Free - Limited Time)
+                  🪔 Diwali Special (100% Free - Next 15 Days Only)
                 </span>
               )}
             </div>
@@ -299,13 +299,13 @@ export default function CheckoutForm({
               🪔
             </div>
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-200/80 text-amber-900 text-xs font-black uppercase tracking-wider shadow-xs">
-              Limited Time Diwali Celebration
+              Limited Time Diwali Offer • Next 15 Days Only
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               Happy Diwali! 100% Free
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed font-medium">
-              As part of our Diwali Celebration offer, your 1-Year <strong>{plan.name}</strong> membership is completely free. No UPI transfer, bank details, or UTR verification needed!
+              As part of our Diwali Celebration offer (valid for the next 15 days), your 1-Year <strong>{plan.name}</strong> membership is completely free. No UPI transfer, bank details, or UTR verification needed!
             </p>
             <div className="pt-2">
               <Button

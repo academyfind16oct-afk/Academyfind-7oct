@@ -1,3 +1,16 @@
+// 🪔 Diwali Offer Window: Limited-time offer active for the next 15 days (Valid till Nov 15, 2026)
+export const DIWALI_OFFER_DEADLINE = new Date("2026-11-15T23:59:59+05:30");
+
+export function isDiwaliOfferActive(): boolean {
+  return new Date() <= DIWALI_OFFER_DEADLINE;
+}
+
+export function getDiwaliOfferDaysRemaining(): number {
+  const diffMs = DIWALI_OFFER_DEADLINE.getTime() - Date.now();
+  if (diffMs <= 0) return 0;
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
 export interface PlanFeature {
   text: string;
   subtext?: string;
@@ -25,8 +38,8 @@ export const SUBSCRIPTION_PLANS: PlanConfig[] = [
     id: "VERIFIED",
     name: "Verified",
     desc: "Build trust, get verified badge, and start capturing student leads.",
-    topBadge: "🪔 DIWALI SPECIAL • 100% FREE",
-    badge: "LIMITED TIME OFFER",
+    topBadge: "🪔 DIWALI SPECIAL • 100% FREE (15 DAYS ONLY)",
+    badge: "LIMITED TIME OFFER • NEXT 15 DAYS",
     actionText: "Claim Free Diwali Offer",
     pricing: {
       monthly: { offer: 199 },

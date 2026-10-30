@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getMobileUserId } from "@/lib/auth/getMobileUserId";
 import { v2 as cloudinary } from "cloudinary";
+import { isDiwaliOfferActive } from "@/lib/subscription/plans";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -13,7 +14,7 @@ const OFFICIAL_PLANS = [
   {
     id: "VERIFIED",
     name: "Verified",
-    badge: "🪔 DIWALI SPECIAL • 100% FREE",
+    badge: "🪔 DIWALI SPECIAL • 100% FREE (15 DAYS ONLY)",
     pricing: {
       monthly: { original: 499, offer: 199 },
       annual: { original: 2999, offer: 0 },
@@ -230,7 +231,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Invalid plan selected." }, { status: 400 });
     }
 
-    const isFreeDiwaliOffer = planRequested === "VERIFIED" && billingCycle === "ANNUAL" && amountPaid === 0;
+    const isFreeDiwaliOffer = planRequested === "VERIFIED" && billingCycle === "ANNUAL" && amountPaid === 0 && isDiwaliOfferActive();
 
     if (!isFreeDiwaliOffer && (!utrNumber || utrNumber.length < 6)) {
       return NextResponse.json(

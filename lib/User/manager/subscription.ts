@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { v2 as cloudinary } from "cloudinary";
+import { isDiwaliOfferActive } from "@/lib/subscription/plans";
 
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -78,6 +79,9 @@ export async function activateFreePlan(instituteId: string, planId: string = "VE
         if (planId !== "VERIFIED") {
             return { success: false, error: "Only Verified Annual plan is eligible for free Diwali activation." };
         }
+        if (!isDiwaliOfferActive()) {
+            return { success: false, error: "Diwali 15-day promotional offer has ended." };
+        }
 
         const institute = await prisma.institute.findUnique({
             where: { id: instituteId },
@@ -122,10 +126,14 @@ export async function activateFreePlan(instituteId: string, planId: string = "VE
             console.warn("Meili sync warning during free plan activation:", syncErr);
         }
 
-        revalidatePath(`/manager/${instituteId}/subscription`);
-        revalidatePath(`/manager/${instituteId}`);
-        revalidatePath(`/institute/${instituteId}`);
-        revalidatePath("/");
+        try {
+            revalidatePath(`/manager/${instituteId}/subscription`);
+            revalidatePath(`/manager/${instituteId}`);
+            revalidatePath(`/institute/${instituteId}`);
+            revalidatePath("/");
+        } catch (revalidateErr) {
+            console.warn("Revalidate path note (non-request context):", revalidateErr);
+        }
 
         return {
             success: true,
