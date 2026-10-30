@@ -12,8 +12,6 @@ import CategoryStats from "@/components/categories/CategoriesStats";
 import CategoryCTA from "@/components/category/CategoryCTA";
 import MoreCategories from "@/components/categories/MoreCategories";
 
-export const revalidate = 86400;
-
 // ─── Types ───────────────────────────────────────────────────
 interface PageProps {
   searchParams: Promise<{ city?: string }>;
@@ -214,12 +212,29 @@ function JsonLdSchemas({ parentCategories }: JsonLdProps) {
   );
 }
 
+export const dynamic = "force-dynamic";
+
 // ─── 3. PAGE COMPONENT ───────────────────────────────────────
 export default async function CategoriesPage({ searchParams }: PageProps) {
   const sp = await searchParams;
-  const citySlug = sp.city;
+  const rawCity = sp.city?.trim();
+  const normalizedCity = rawCity ? rawCity.toLowerCase() : undefined;
 
-  // Prisma se heavy nested data fetch kiya
+  let matchedCitySlug: string | undefined = undefined;
+  if (normalizedCity) {
+    const city = await prisma.city.findFirst({
+      where: {
+        OR: [
+          { slug: normalizedCity },
+          { name: { equals: normalizedCity, mode: "insensitive" } },
+        ],
+      },
+      select: { slug: true },
+    });
+    matchedCitySlug = city?.slug ?? normalizedCity;
+  }
+
+  // Prisma se heavy nested data fetch kiya - filtering by city when provided
   const parentCategories = await prisma.category.findMany({
     where: { parentId: null },
     include: {
@@ -231,7 +246,10 @@ export default async function CategoriesPage({ searchParams }: PageProps) {
                 select: {
                   institutes: {
                     where: {
-                      institute: { isActive: true },
+                      institute: {
+                        isActive: true,
+                        ...(matchedCitySlug ? { city: { slug: matchedCitySlug } } : {}),
+                      },
                     },
                   },
                 },
@@ -251,15 +269,17 @@ export default async function CategoriesPage({ searchParams }: PageProps) {
     slug: c.slug,
   }));
 
+  const effectiveCitySlug = matchedCitySlug || normalizedCity;
+
   return (
     <>
       <JsonLdSchemas parentCategories={simplifiedCategories} />
 
       {/* 👇 citySlug sabko as prop bhej diya */}
-      <CategoriesHero citySlug={citySlug} />
-      <CategoryStats citySlug={citySlug} />
-      <CategoryContainer parentCategories={parentCategories} citySlug={citySlug} />
-      <MoreCategories citySlug={citySlug} />  
+      <CategoriesHero citySlug={effectiveCitySlug} />
+      <CategoryStats citySlug={effectiveCitySlug} />
+      <CategoryContainer parentCategories={parentCategories} citySlug={effectiveCitySlug} />
+      <MoreCategories citySlug={effectiveCitySlug} />  
       <CategoryCTA />
     </>
   );
