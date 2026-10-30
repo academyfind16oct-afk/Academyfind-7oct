@@ -71,24 +71,24 @@ export default function BentoHero({ featuredPosts }: { featuredPosts: any[] }) {
             <Link
               href={`/blog/${mainPost.slug}`}
               prefetch={false}
-              className="group relative flex min-h-[400px] flex-col justify-end overflow-hidden rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 lg:col-span-5 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150"
+              className="group relative flex min-h-[380px] sm:min-h-[440px] lg:min-h-[500px] flex-col justify-end overflow-hidden rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 lg:col-span-5 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150"
             >
               <Image
                 src={mainPost.coverImage || DEFAULT_IMAGE}
                 alt={mainPost.title}
                 fill
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 via-45% to-transparent" />
 
-              <div className="relative z-10 p-8">
-                <span className="mb-4 inline-block rounded-full bg-amber-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-950">
+              <div className="relative z-10 p-6 sm:p-8">
+                <span className="mb-3 sm:mb-4 inline-block rounded-full bg-amber-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-950">
                   {mainPost.category?.name || "Featured"}
                 </span>
-                <h3 className="text-2xl font-bold leading-snug text-white transition-colors group-hover:text-amber-300">
+                <h3 className="text-xl sm:text-2xl font-bold leading-snug text-white transition-colors group-hover:text-amber-300">
                   {mainPost.title}
                 </h3>
-                <div className="mt-4 flex items-center gap-4 text-sm text-slate-300">
+                <div className="mt-3 sm:mt-4 flex items-center gap-4 text-xs sm:text-sm text-slate-300">
                   <div className="flex items-center gap-1.5">
                     <Clock3 className="h-4 w-4 text-amber-500" />
                     {mainPost.readingTime || 5} min read
@@ -107,26 +107,26 @@ export default function BentoHero({ featuredPosts }: { featuredPosts: any[] }) {
             <Link
               href={`/blog/${sidePost1.slug}`}
               prefetch={false}
-              className="group relative flex min-h-[250px] flex-col justify-end overflow-hidden rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 lg:col-span-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300"
+              className="group relative flex aspect-[16/10] min-h-[320px] sm:min-h-[360px] lg:min-h-[380px] flex-col justify-end overflow-hidden rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 lg:col-span-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300"
             >
               <Image
                 src={sidePost1.coverImage || DEFAULT_IMAGE}
                 alt={sidePost1.title}
                 fill
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 via-45% to-transparent" />
 
               <div className="relative z-10 flex h-full flex-col justify-between p-6">
                 <div className="self-end rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-md ring-1 ring-white/20">
                   {sidePost1.category?.name}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold leading-snug text-white transition-colors group-hover:text-amber-300 line-clamp-2">
+                  <h3 className="text-lg sm:text-xl font-bold leading-snug text-white transition-colors group-hover:text-amber-300 line-clamp-2">
                     {sidePost1.title}
                   </h3>
-                  <div className="mt-3 flex items-center gap-3 text-sm text-slate-300">
-                    <span className="text-amber-400">{sidePost1.authorProfile?.displayName || "AcademyFind"}</span>
+                  <div className="mt-2.5 sm:mt-3 flex items-center gap-3 text-xs sm:text-sm text-slate-300">
+                    <span className="text-amber-400 font-medium">{sidePost1.authorProfile?.displayName || "AcademyFind"}</span>
                     <span>•</span>
                     <span>{formatDate(sidePost1.publishedAt)}</span>
                   </div>
@@ -140,26 +140,26 @@ export default function BentoHero({ featuredPosts }: { featuredPosts: any[] }) {
             <Link
               href={`/blog/${sidePost2.slug}`}
               prefetch={false}
-              className="group relative flex min-h-[250px] flex-col justify-end overflow-hidden rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 lg:col-span-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500"
+              className="group relative flex aspect-[16/10] min-h-[320px] sm:min-h-[360px] lg:min-h-[380px] flex-col justify-end overflow-hidden rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-100 lg:col-span-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500"
             >
               <Image
                 src={sidePost2.coverImage || DEFAULT_IMAGE}
                 alt={sidePost2.title}
                 fill
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 via-45% to-transparent" />
 
               <div className="relative z-10 flex h-full flex-col justify-between p-6">
                 <div className="self-end rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-md ring-1 ring-white/20">
                   {sidePost2.category?.name}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold leading-snug text-white transition-colors group-hover:text-amber-300 line-clamp-2">
+                  <h3 className="text-lg sm:text-xl font-bold leading-snug text-white transition-colors group-hover:text-amber-300 line-clamp-2">
                     {sidePost2.title}
                   </h3>
-                  <div className="mt-3 flex items-center gap-3 text-sm text-slate-300">
-                    <span className="text-amber-400">{sidePost2.authorProfile?.displayName || "AcademyFind"}</span>
+                  <div className="mt-2.5 sm:mt-3 flex items-center gap-3 text-xs sm:text-sm text-slate-300">
+                    <span className="text-amber-400 font-medium">{sidePost2.authorProfile?.displayName || "AcademyFind"}</span>
                     <span>•</span>
                     <span>{formatDate(sidePost2.publishedAt)}</span>
                   </div>

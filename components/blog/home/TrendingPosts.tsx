@@ -66,12 +66,12 @@ export default function TrendingPosts({ posts }: TrendingPostsProps) {
                 {index + 1}
               </div>
 
-              <div className="relative z-10 aspect-[4/3] overflow-hidden">
+              <div className="relative z-10 aspect-[16/10] overflow-hidden">
                 <Image
                   src={post.coverImage || DEFAULT_IMAGE}
                   alt={post.title}
                   fill
-                  className="object-cover transition duration-700 group-hover:scale-110"
+                  className="object-cover object-top transition duration-700 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent" />
 

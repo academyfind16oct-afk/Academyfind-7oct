@@ -82,12 +82,12 @@ export default function LatestPosts({ posts }: LatestPostsProps) {
                     style={{ animationDelay: `${i * 100}ms` }}
                   >
                     {/* Image */}
-                    <div className={`relative overflow-hidden bg-slate-200 ${isLarge ? 'md:w-1/2 aspect-[4/3] md:aspect-auto' : 'w-full aspect-[4/3]'}`}>
+                    <div className={`relative overflow-hidden bg-slate-200 ${isLarge ? 'md:w-1/2 aspect-[16/10] md:aspect-auto' : 'w-full aspect-[16/10]'}`}>
                       <Image
                         src={post.coverImage || DEFAULT_IMAGE}
                         alt={post.title}
                         fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-slate-900/10 transition-colors group-hover:bg-transparent" />
 
