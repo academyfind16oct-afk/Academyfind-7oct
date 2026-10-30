@@ -72,6 +72,12 @@ interface MatchResult {
 
 const SAMPLE_PROMPTS = [
   {
+    title: 'Dance Classes in Noida',
+    desc: 'Beginner Bollywood & Contemporary, weekend batch, flexible budget',
+    prompt:
+      'Looking for beginner-friendly dance classes in Noida for Bollywood and Contemporary styles. Prefer weekend batches with experienced choreographers. Which academies fit best?',
+  },
+  {
     title: 'Class 11 Agra (JEE 2028)',
     desc: 'Average student, ₹1.5L budget, small batches & doubt focus',
     prompt:
@@ -84,16 +90,10 @@ const SAMPLE_PROMPTS = [
       "I am a NEET repeater in Kota with a budget of ₹1.8 lakh. My biology and chemistry are solid but I struggle with physics numericals. I need an institute with strong 1-on-1 doubt counters and disciplined batch monitoring. Which 3 institutes should I shortlist?",
   },
   {
-    title: 'UPSC Aspirant in Delhi',
-    desc: 'Working professional, weekend/evening batch, ₹1.6L budget',
+    title: 'Guitar Classes in Delhi',
+    desc: 'Acoustic guitar beginner, evening slots, central/south Delhi',
     prompt:
-      "I am a working software engineer in Delhi aiming for UPSC 2027. My budget is ₹1.6 lakh. I need either evening or weekend batches with strong answer writing evaluation and current affairs mentorship. What are the 3 best institutes for me?",
-  },
-  {
-    title: 'Class 9-10 Foundation',
-    desc: 'Maths Olympiad & board balance, Jaipur, ₹80k budget',
-    prompt:
-      "Looking for Class 9 and 10 Foundation coaching in Jaipur for NTSE and Maths Olympiad along with CBSE boards. Budget is around ₹80,000 per year. Prefer medium batch with conceptual teachers. Which 3 academies fit best?",
+      'Looking for acoustic guitar classes in Delhi for adults in evening or weekend slots. Want practical chords and music theory. Which top 3 music academies should I check out?',
   },
 ];
 
@@ -103,6 +103,11 @@ const EXAM_OPTIONS = [
   'NEET-UG Medical',
   'UPSC Civil Services (IAS/IPS)',
   'Foundation (Class 9 & 10)',
+  'Dance & Performing Arts',
+  'Music & Guitar Classes',
+  'Sports & Fitness Academies',
+  'Spoken English & Languages',
+  'Coding & Programming',
   'Commerce & CA Foundation',
   'CUET (UG)',
   'SSC / Government Exams',
@@ -684,175 +689,199 @@ export default function FindMyAcademyClient() {
               </div>
             </div>
 
-            {/* THE 3 SIGNATURE ACADEMY CARDS */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {result.shortlist.map((inst, index) => {
-                const currentTab = activeCardTab[index] || 'why';
-                return (
-                  <div
-                    key={inst.id || index}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 backdrop-blur-md p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:border-amber-300/80 hover:bg-white hover:shadow-[0_20px_45px_rgba(251,191,36,0.12)] hover:-translate-y-1.5"
-                  >
-                    {/* Ambient subtle corner glow on hover */}
-                    <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-400/10 blur-xl group-hover:bg-amber-400/20 transition-all" />
+            {/* THE SIGNATURE ACADEMY CARDS */}
+            {result.shortlist.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {result.shortlist.map((inst, index) => {
+                    const currentTab = activeCardTab[index] || 'why';
+                    return (
+                      <div
+                        key={inst.id || index}
+                        className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 backdrop-blur-md p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:border-amber-300/80 hover:bg-white hover:shadow-[0_20px_45px_rgba(251,191,36,0.12)] hover:-translate-y-1.5"
+                      >
+                        {/* Ambient subtle corner glow on hover */}
+                        <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-400/10 blur-xl group-hover:bg-amber-400/20 transition-all" />
 
-                    <div>
-                      {/* Top Badges */}
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold px-3 py-1 shadow-2xs">
-                          #{index + 1} {inst.badge}
-                        </span>
-
-                        <div className="flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
-                          <CheckCircle2 className="size-3" />
-                          {inst.matchScore}% Fit
-                        </div>
-                      </div>
-
-                      {/* Institute Title */}
-                      <h3 className="text-lg font-extrabold text-slate-900 leading-snug group-hover:text-amber-600 transition-colors">
-                        {inst.name}
-                      </h3>
-
-                      {/* City & Rating */}
-                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-2">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="size-3.5 text-slate-400" />
-                          {inst.city}
-                        </span>
-                        <span className="flex items-center gap-1 font-bold text-amber-600">
-                          <Star className="size-3.5 fill-amber-500 text-amber-500" />
-                          {inst.rating} / 5.0
-                        </span>
-                      </div>
-
-                      {/* Key Stats Pill Bar */}
-                      <div className="mt-4 grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs">
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                            Est. Fees
-                          </span>
-                          <span className="font-bold text-slate-800 text-[11px]">
-                            {inst.feeEstimate}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                            Batch Capacity
-                          </span>
-                          <span className="font-bold text-slate-800 text-[11px]">
-                            {inst.batchSizeEstimate}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Card Content Tabs */}
-                      <div className="mt-4 border-b border-slate-100 flex gap-2 text-xs">
-                        <button
-                          onClick={() =>
-                            setActiveCardTab({ ...activeCardTab, [index]: 'why' })
-                          }
-                          className={`pb-1.5 font-bold transition-all border-b-2 ${
-                            currentTab === 'why'
-                              ? 'border-amber-500 text-amber-600'
-                              : 'border-transparent text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          Personal Fit
-                        </button>
-                        <button
-                          onClick={() =>
-                            setActiveCardTab({ ...activeCardTab, [index]: 'budget' })
-                          }
-                          className={`pb-1.5 font-bold transition-all border-b-2 ${
-                            currentTab === 'budget'
-                              ? 'border-amber-500 text-amber-600'
-                              : 'border-transparent text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          Budget & Batch
-                        </button>
-                        <button
-                          onClick={() =>
-                            setActiveCardTab({ ...activeCardTab, [index]: 'doubt' })
-                          }
-                          className={`pb-1.5 font-bold transition-all border-b-2 ${
-                            currentTab === 'doubt'
-                              ? 'border-amber-500 text-amber-600'
-                              : 'border-transparent text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          Doubt Support
-                        </button>
-                      </div>
-
-                      {/* Tab Body */}
-                      <div className="mt-3 text-xs text-slate-600 min-h-[110px] leading-relaxed">
-                        {currentTab === 'why' && (
-                          <div className="space-y-2">
-                            <p className="text-slate-700">{inst.whySuitable}</p>
-                            <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/50 text-[11px] text-amber-900">
-                              <span className="font-bold block">💡 Counselor Tip:</span>
-                              {inst.counselorTip}
-                            </div>
-                          </div>
-                        )}
-
-                        {currentTab === 'budget' && (
-                          <div className="space-y-2">
-                            <div>
-                              <span className="font-bold text-slate-800 block text-[11px]">
-                                💰 Budget Analysis:
-                              </span>
-                              <p className="text-slate-600">{inst.budgetFit}</p>
-                            </div>
-                            <div>
-                              <span className="font-bold text-slate-800 block text-[11px]">
-                                👥 Batch Size Alignment:
-                              </span>
-                              <p className="text-slate-600">{inst.batchFit}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {currentTab === 'doubt' && (
-                          <div className="space-y-2">
-                            <span className="font-bold text-slate-800 block text-[11px]">
-                              ❓ Doubt Resolution Protocol:
+                          {/* Top Badges */}
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold px-3 py-1 shadow-2xs">
+                              #{index + 1} {inst.badge}
                             </span>
-                            <p className="text-slate-600">{inst.doubtSupportFit}</p>
+
+                            <div className="flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                              <CheckCircle2 className="size-3" />
+                              {inst.matchScore}% Fit
+                            </div>
                           </div>
-                        )}
+
+                          {/* Institute Title */}
+                          <h3 className="text-lg font-extrabold text-slate-900 leading-snug group-hover:text-amber-600 transition-colors">
+                            {inst.name}
+                          </h3>
+
+                          {/* City & Rating */}
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-2">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="size-3.5 text-slate-400" />
+                              {inst.city}
+                            </span>
+                            <span className="flex items-center gap-1 font-bold text-amber-600">
+                              <Star className="size-3.5 fill-amber-500 text-amber-500" />
+                              {inst.rating} / 5.0
+                            </span>
+                          </div>
+
+                          {/* Key Stats Pill Bar */}
+                          <div className="mt-4 grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                                Est. Fees
+                              </span>
+                              <span className="font-bold text-slate-800 text-[11px]">
+                                {inst.feeEstimate}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                                Batch Capacity
+                              </span>
+                              <span className="font-bold text-slate-800 text-[11px]">
+                                {inst.batchSizeEstimate}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Card Content Tabs */}
+                          <div className="mt-4 border-b border-slate-100 flex gap-2 text-xs">
+                            <button
+                              onClick={() =>
+                                setActiveCardTab({ ...activeCardTab, [index]: 'why' })
+                              }
+                              className={`pb-1.5 font-bold transition-all border-b-2 ${
+                                currentTab === 'why'
+                                  ? 'border-amber-500 text-amber-600'
+                                  : 'border-transparent text-slate-400 hover:text-slate-600'
+                              }`}
+                            >
+                              Personal Fit
+                            </button>
+                            <button
+                              onClick={() =>
+                                setActiveCardTab({ ...activeCardTab, [index]: 'budget' })
+                              }
+                              className={`pb-1.5 font-bold transition-all border-b-2 ${
+                                currentTab === 'budget'
+                                  ? 'border-amber-500 text-amber-600'
+                                  : 'border-transparent text-slate-400 hover:text-slate-600'
+                              }`}
+                            >
+                              Budget & Batch
+                            </button>
+                            <button
+                              onClick={() =>
+                                setActiveCardTab({ ...activeCardTab, [index]: 'doubt' })
+                              }
+                              className={`pb-1.5 font-bold transition-all border-b-2 ${
+                                currentTab === 'doubt'
+                                  ? 'border-amber-500 text-amber-600'
+                                  : 'border-transparent text-slate-400 hover:text-slate-600'
+                              }`}
+                            >
+                              Doubt Support
+                            </button>
+                          </div>
+
+                          {/* Tab Body */}
+                          <div className="mt-3 text-xs text-slate-600 min-h-[110px] leading-relaxed">
+                            {currentTab === 'why' && (
+                              <div className="space-y-2">
+                                <p className="text-slate-700">{inst.whySuitable}</p>
+                                <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/50 text-[11px] text-amber-900">
+                                  <span className="font-bold block">💡 Counselor Tip:</span>
+                                  {inst.counselorTip}
+                                </div>
+                              </div>
+                            )}
+
+                            {currentTab === 'budget' && (
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="font-bold text-slate-800 block text-[11px]">
+                                    💰 Budget Analysis:
+                                  </span>
+                                  <p className="text-slate-600">{inst.budgetFit}</p>
+                                </div>
+                                <div>
+                                  <span className="font-bold text-slate-800 block text-[11px]">
+                                    👥 Batch Size Alignment:
+                                  </span>
+                                  <p className="text-slate-600">{inst.batchFit}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {currentTab === 'doubt' && (
+                              <div className="space-y-2">
+                                <span className="font-bold text-slate-800 block text-[11px]">
+                                  ❓ Doubt Resolution Protocol:
+                                </span>
+                                <p className="text-slate-600">{inst.doubtSupportFit}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card CTAs */}
+                        <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                          <Link
+                            href={inst.url}
+                            className="w-full flex items-center justify-center gap-1.5 h-10 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all shadow-2xs hover:-translate-y-0.5"
+                          >
+                            View Full Academy Profile
+                            <ExternalLink className="size-3.5" />
+                          </Link>
+
+                          <Link
+                            href="/compare"
+                            className="w-full flex items-center justify-center gap-1.5 h-9 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-all"
+                          >
+                            <Scale className="size-3" />
+                            Compare With Other Institutes
+                          </Link>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
 
-                    {/* Card CTAs */}
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col gap-2">
-                      <Link
-                        href={inst.url}
-                        className="w-full flex items-center justify-center gap-1.5 h-10 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all shadow-2xs hover:-translate-y-0.5"
-                      >
-                        View Full Academy Profile
-                        <ExternalLink className="size-3.5" />
-                      </Link>
-
-                      <Link
-                        href="/compare"
-                        className="w-full flex items-center justify-center gap-1.5 h-9 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-all"
-                      >
-                        <Scale className="size-3" />
-                        Compare With Other Institutes
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Market Estimation Transparency Footnote */}
-            <p className="text-[11px] text-slate-500 text-center max-w-2xl mx-auto -mt-2">
-              ℹ️ <span className="font-semibold text-slate-600">Note on Fees & Batch Sizes:</span> Figures are realistic market estimates for {result.studentSummary}. Actual tuition may vary based on scholarship test scores, instalment plans, and current batch intake caps. Confirm during demo classes.
-            </p>
+                {/* Market Estimation Transparency Footnote */}
+                <p className="text-[11px] text-slate-500 text-center max-w-2xl mx-auto -mt-2">
+                  ℹ️ <span className="font-semibold text-slate-600">Note on Fees & Batch Sizes:</span> Figures are realistic market estimates for {result.studentSummary}. Actual tuition may vary based on scholarship test scores, instalment plans, and current batch intake caps. Confirm during demo classes.
+                </p>
+              </>
+            ) : (
+              <div className="p-8 rounded-3xl border border-slate-200/80 bg-white/90 text-center space-y-4">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  <Building2 className="size-7" />
+                </div>
+                <h3 className="text-xl font-extrabold text-slate-900">
+                  No Direct Verified Matches Found Yet
+                </h3>
+                <p className="text-sm text-slate-600 max-w-md mx-auto">
+                  {result.studentDiagnosis}
+                </p>
+                <div className="pt-2 flex flex-wrap justify-center gap-3">
+                  <Link
+                    href={result.directoryUrl || '/categories'}
+                    className="px-6 py-2.5 rounded-full bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-all shadow-xs"
+                  >
+                    Browse All Categories
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* VIEW MORE SUGGESTIONS & ALTERNATIVES */}
             {result.moreSuggestions && result.moreSuggestions.length > 0 && (

@@ -153,17 +153,36 @@ CRITICAL: Do NOT output <think> tags or any reasoning. Respond directly.
       // If Meilisearch returned empty (or failed/timed out), fall back to PostgreSQL Prisma
       if (cleanHitsForAI.length === 0) {
         try {
-          const loc = extractedData.locationString || '';
-          const q = extractedData.query || '';
+          const loc = (extractedData.locationString || '').trim();
+          const q = (extractedData.query || '').trim();
+          const qWords = q
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((w: string) => w.length > 2 && !['in', 'at', 'near', 'classes', 'coaching', 'best', 'top', 'for'].includes(w));
+
+          const andFilters: any[] = [{ isActive: true }];
+
+          if (loc) {
+            andFilters.push({
+              OR: [
+                { city: { name: { contains: loc, mode: 'insensitive' } } },
+                { address: { contains: loc, mode: 'insensitive' } },
+              ],
+            });
+          }
+
+          if (qWords.length > 0) {
+            andFilters.push({
+              OR: [
+                { categories: { some: { category: { name: { contains: qWords[0], mode: 'insensitive' } } } } },
+                { name: { contains: qWords[0], mode: 'insensitive' } },
+              ],
+            });
+          }
+
           const dbInstitutes = await prisma.institute.findMany({
             where: {
-              isActive: true,
-              ...(loc ? {
-                OR: [
-                  { city: { name: { contains: loc, mode: 'insensitive' } } },
-                  { address: { contains: loc, mode: 'insensitive' } },
-                ]
-              } : {}),
+              AND: andFilters,
             },
             take: 5,
             orderBy: [{ isVerified: 'desc' }, { averageRating: 'desc' }, { reviewCount: 'desc' }],
